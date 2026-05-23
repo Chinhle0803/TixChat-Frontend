@@ -5,23 +5,8 @@
   "installCommand": "npm install",
   "rewrites": [
     {
-      "source": "/api/(.*)",
-      "destination": "http://3.26.7.30:5000/api/$1"
-    },
-    {
-      "source": "/((?!api|assets|socket.io|favicon.ico).*)",
+      "source": "/((?!api|assets|socket.io|favicon.ico|logo.png|vite.svg).*)",
       "destination": "/index.html"
-    }
-  ],
-  "headers": [
-    {
-      "source": "/socket.io/(.*)",
-      "headers": [
-        {
-          "key": "Access-Control-Allow-Origin",
-          "value": "*"
-        }
-      ]
     }
   ]
 }

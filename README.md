@@ -31,16 +31,20 @@ VITE_MAX_MESSAGE_LENGTH=5000
 
 ## Deployment
 
-This app is deployed on Vercel. Connect your GitHub repository to enable automatic deployments.
+This app is deployed on Vercel. The backend API and Socket.IO server should run behind HTTPS on EC2.
 
 ### Required Environment Variables (Vercel)
 
 | Variable | Description |
 |----------|-------------|
-| `VITE_API_URL` | Backend API URL |
-| `VITE_SOCKET_URL` | Backend Socket.IO URL |
+| `VITE_API_URL` | HTTPS backend API URL, e.g. `https://api.example.com/api` |
+| `VITE_SOCKET_URL` | HTTPS backend Socket.IO URL, e.g. `https://api.example.com` |
 | `VITE_APP_NAME` | App name |
 | `VITE_MAX_MESSAGE_LENGTH` | Max message length |
+
+Do not use a raw EC2 IP with `http://` for Vercel production. Mixed content will be blocked by the browser.
+
+Detailed deployment notes: [../docs/vercel-ec2-deploy.md](../docs/vercel-ec2-deploy.md)
 
 ## Features
 

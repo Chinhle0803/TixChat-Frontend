@@ -4,19 +4,9 @@ import useAuthStore from '../store/authStore'
 import useChatStore from '../store/chatStore'
 import { conversationService } from './api'
 import { isConversationMuted, notifyIncomingMessage } from './browserNotifications.js'
+import { resolveSocketBaseUrl } from '../utils/runtimeUrl.js'
 
-const normalizeBaseUrl = (value) => String(value || '').trim().replace(/\/$/, '')
-
-const resolveDefaultSocketUrl = () => {
-  if (typeof window !== 'undefined' && window.location?.hostname) {
-    const protocol = window.location.protocol === 'https:' ? 'https:' : 'http:'
-    return `${protocol}//${window.location.hostname}:5000`
-  }
-
-  return 'http://localhost:5000'
-}
-
-const SOCKET_URL = normalizeBaseUrl(import.meta.env.VITE_SOCKET_URL || resolveDefaultSocketUrl())
+const SOCKET_URL = resolveSocketBaseUrl(import.meta.env.VITE_SOCKET_URL)
 
 let socket = null
 let socketCore = null

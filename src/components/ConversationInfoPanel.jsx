@@ -1121,22 +1121,21 @@ const ConversationInfoPanel = ({
     if (!conversationId) return
 
     const inviteCode = String(conversation?.groupInviteCode || conversationId).slice(0, 10).toUpperCase()
-    const link = `${window.location.origin}/join-group/${inviteCode}`
 
     try {
       if (navigator?.clipboard?.writeText) {
-        await navigator.clipboard.writeText(link)
+        await navigator.clipboard.writeText(inviteCode)
       }
       await notify({
-        title: 'Đã sao chép link mời',
-        message: link,
+        title: 'Đã sao chép mã mời',
+        message: `Mã mời nhóm: ${inviteCode}`,
         confirmText: 'OK',
         variant: 'success',
       })
     } catch (error) {
       await notify({
         title: 'Không thể sao chép tự động',
-        message: `Link mời: ${link}`,
+        message: `Mã mời nhóm: ${inviteCode}`,
         confirmText: 'Đã hiểu',
         variant: 'info',
       })
@@ -1146,8 +1145,10 @@ const ConversationInfoPanel = ({
   const handleShowInviteQr = async () => {
     const inviteCode = String(conversation?.groupInviteCode || conversationId || '').slice(0, 10).toUpperCase()
     await notify({
-      title: 'Mã QR mời vào nhóm',
-      message: `QR code sẽ được render từ mã: ${inviteCode || 'N/A'} (placeholder UI).`,
+      title: 'Mã mời vào nhóm',
+      message: inviteCode
+        ? `Chia sẻ mã mời này với thành viên khác: ${inviteCode}`
+        : 'Nhóm này chưa có mã mời khả dụng.',
       confirmText: 'OK',
       variant: 'info',
     })
