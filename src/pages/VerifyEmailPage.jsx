@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react'
 import { useSearchParams, useNavigate } from 'react-router-dom'
 import axios from 'axios'
+import { resolveApiBaseUrl } from '../utils/runtimeUrl.js'
 import './VerifyEmailPage.css'
 
-const normalizeBaseUrl = (value) => String(value || '').trim().replace(/\/$/, '')
-const API_URL = normalizeBaseUrl(import.meta.env.VITE_API_URL || 'http://localhost:5000/api')
+const API_URL = resolveApiBaseUrl(import.meta.env.VITE_API_URL)
 
 export default function VerifyEmailPage() {
   const [status, setStatus] = useState('verifying') // verifying, success, error

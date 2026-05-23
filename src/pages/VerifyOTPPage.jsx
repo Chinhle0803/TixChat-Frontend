@@ -1,10 +1,10 @@
 import { useState, useEffect, useRef } from 'react'
 import { useAuth } from '../hooks/useAuth'
 import useAuthStore from '../store/authStore'
+import { resolveApiBaseUrl } from '../utils/runtimeUrl.js'
 import '../styles/VerifyOTP.css'
 
-const normalizeBaseUrl = (value) => String(value || '').trim().replace(/\/$/, '')
-const API_URL = normalizeBaseUrl(import.meta.env.VITE_API_URL || 'http://localhost:5000/api')
+const API_URL = resolveApiBaseUrl(import.meta.env.VITE_API_URL)
 
 export default function VerifyOTPPage({ email, onSuccess }) {
   const { loading, error: authError } = useAuth()

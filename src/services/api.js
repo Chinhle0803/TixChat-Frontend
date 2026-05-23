@@ -1,19 +1,9 @@
 import axios from 'axios'
 import useAuthStore from '../store/authStore'
 import { createChatApiServices } from './apiContracts.js'
+import { resolveApiBaseUrl } from '../utils/runtimeUrl.js'
 
-const normalizeBaseUrl = (value) => String(value || '').trim().replace(/\/$/, '')
-
-const resolveDefaultApiUrl = () => {
-  if (typeof window !== 'undefined' && window.location?.hostname) {
-    const protocol = window.location.protocol === 'https:' ? 'https:' : 'http:'
-    return `${protocol}//${window.location.hostname}:5000/api`
-  }
-
-  return 'http://localhost:5000/api'
-}
-
-export const API_URL = normalizeBaseUrl(import.meta.env.VITE_API_URL || resolveDefaultApiUrl())
+export const API_URL = resolveApiBaseUrl(import.meta.env.VITE_API_URL)
 
 const apiClient = axios.create({
   baseURL: API_URL,

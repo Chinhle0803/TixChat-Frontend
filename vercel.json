@@ -3,6 +3,16 @@
   "buildCommand": "npm run build",
   "devCommand": "npm run dev",
   "installCommand": "npm install",
+  "rewrites": [
+    {
+      "source": "/api/(.*)",
+      "destination": "http://3.26.7.30:5000/api/$1"
+    },
+    {
+      "source": "/((?!api|assets|socket.io|favicon.ico).*)",
+      "destination": "/index.html"
+    }
+  ],
   "headers": [
     {
       "source": "/socket.io/(.*)",
