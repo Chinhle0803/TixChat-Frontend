@@ -73,9 +73,14 @@ const AuthenticatedLayout = () => {
     navigate(`/chat?conversationId=${encodeURIComponent(normalizedConversationId)}`)
   }, [navigate])
 
-  const handleAcceptIncomingCall = useCallback(async (_callId, conversationId) => {
+  const handleAcceptIncomingCall = useCallback(async (callId, conversationId) => {
     try {
-      await callControls?.acceptCall?.()
+      const incomingCallId = normalizeId(callControls?.incomingCall?.callId)
+      if (incomingCallId && (!callId || normalizeId(callId) === incomingCallId)) {
+        await callControls?.acceptCall?.()
+      } else {
+        await callControls?.joinCall?.(callId)
+      }
       openConversationScreen(conversationId || callControls?.incomingCall?.conversationId)
     } catch (error) {
       await notify({

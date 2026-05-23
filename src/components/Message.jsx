@@ -112,6 +112,7 @@ const Message = ({
   onDeleteForAll,
   onReact,
   onShare,
+  onJoinCall,
   replyPreviewMap,
 }) => {
   // Handle message safety
@@ -132,6 +133,7 @@ const Message = ({
   const messageType = String(message?.type || '').toLowerCase()
   const messageMetadata = message?.metadata || {}
   const isCallMessage = messageMetadata?.kind === 'call'
+  const isGroupCallActiveNotice = messageMetadata?.kind === 'group_call_active'
   const senderSystemName = String(
     message?.senderName ||
     message?.sender?.name ||
@@ -169,11 +171,26 @@ const Message = ({
   const senderInitial = String(senderDisplayName || '?').trim().charAt(0).toUpperCase() || '?'
 
   if (isSystemMessage) {
+    const canJoinGroupCall = Boolean(
+      isGroupCallActiveNotice &&
+      messageMetadata?.active !== false &&
+      normalizeId(messageMetadata?.callId)
+    )
+
     return (
       <div className="message system" role="status" aria-live="polite">
         <div className="message-wrapper">
           <div className="message-content">
             <p className="message-text">{message?.content || ''}</p>
+            {canJoinGroupCall && (
+              <button
+                type="button"
+                className="system-call-join-button"
+                onClick={() => onJoinCall?.(messageMetadata.callId)}
+              >
+                Tham gia cuộc gọi
+              </button>
+            )}
           </div>
         </div>
       </div>

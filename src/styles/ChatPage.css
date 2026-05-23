@@ -118,14 +118,16 @@
   align-items: center;
   gap: 12px;
   padding: 14px;
+  border-color: color-mix(in srgb, var(--destructive) 26%, transparent);
+  background: color-mix(in srgb, var(--destructive) 6%, var(--popover));
 }
 
 .global-call-icon {
   width: 44px;
   height: 44px;
   border-radius: 999px;
-  background: var(--accent);
-  color: var(--accent-foreground);
+  background: color-mix(in srgb, var(--destructive) 14%, transparent);
+  color: var(--destructive);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -137,6 +139,10 @@
   display: block;
   color: var(--muted-foreground);
   font-size: 12px;
+}
+
+.call-status-waiting {
+  color: var(--destructive) !important;
 }
 
 .global-call-copy strong,

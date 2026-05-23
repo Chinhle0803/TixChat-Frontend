@@ -146,9 +146,14 @@ export const useGlobalRealtime = ({ currentPath = '/', callControls = null } = {
 
   useEffect(() => {
     const call = callControls?.incomingCall
+    const callConversationId = normalizeId(call?.conversationId)
+    const isViewingIncomingCallConversation =
+      currentPath === '/chat' &&
+      callConversationId &&
+      callConversationId === normalizeId(currentConversationIdRef.current)
 
-    if (!call?.callId || currentPath === '/chat') {
-      dismissMatching((banner) => banner.type === 'call')
+    if (!call?.callId || isViewingIncomingCallConversation) {
+      dismissMatching((banner) => banner.type === 'call' && banner?.data?.action !== 'join')
       return
     }
 
@@ -166,11 +171,45 @@ export const useGlobalRealtime = ({ currentPath = '/', callControls = null } = {
       data: {
         type: 'call',
         callId: normalizeId(call?.callId),
-        conversationId: normalizeId(call?.conversationId),
+        conversationId: callConversationId,
       },
       persistent: true,
     })
   }, [callControls?.incomingCall, conversations, currentPath, currentUserId, dismissMatching, upsertBanner])
+
+  useEffect(() => {
+    const call = callControls?.availableGroupCall
+    const callConversationId = normalizeId(call?.conversationId)
+    const isViewingCallConversation =
+      currentPath === '/chat' &&
+      callConversationId &&
+      callConversationId === normalizeId(currentConversationIdRef.current)
+
+    if (!call?.callId || isViewingCallConversation) {
+      dismissMatching((banner) => banner.type === 'call' && banner?.data?.action === 'join')
+      return
+    }
+
+    const title = resolveCallTitle({
+      call,
+      conversations,
+      currentUserId,
+    })
+
+    upsertBanner({
+      id: `group-call-${normalizeId(call?.callId)}`,
+      type: 'call',
+      title,
+      body: 'Cuoc goi nhom dang dien ra',
+      data: {
+        type: 'call',
+        action: 'join',
+        callId: normalizeId(call?.callId),
+        conversationId: callConversationId,
+      },
+      persistent: true,
+    })
+  }, [callControls?.availableGroupCall, conversations, currentPath, currentUserId, dismissMatching, upsertBanner])
 }
 
 export default useGlobalRealtime

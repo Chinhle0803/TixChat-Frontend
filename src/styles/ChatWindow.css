@@ -386,6 +386,20 @@
   font-size: 12px;
 }
 
+.call-status-waiting {
+  color: var(--destructive) !important;
+}
+
+.call-banner.incoming {
+  border-color: color-mix(in srgb, var(--destructive) 26%, transparent);
+  background: color-mix(in srgb, var(--destructive) 6%, var(--card));
+}
+
+.call-banner.active-group {
+  border-color: color-mix(in srgb, var(--primary) 30%, transparent);
+  background: color-mix(in srgb, var(--primary) 8%, var(--card));
+}
+
 .call-banner-actions,
 .call-controls {
   display: flex;

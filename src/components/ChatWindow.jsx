@@ -201,6 +201,19 @@ const ChatWindow = ({
   }, [messages])
 
   const reversedMessages = useMemo(() => [...(messages || [])].reverse(), [messages])
+  const currentConversationId = normalizeId(conversation?._id || conversation?.conversationId)
+  const incomingCallConversationId = normalizeId(callControls?.incomingCall?.conversationId)
+  const activeCallConversationId = normalizeId(callControls?.currentCall?.conversationId)
+  const availableGroupCallConversationId = normalizeId(callControls?.availableGroupCall?.conversationId)
+  const showIncomingCallBanner = Boolean(
+    callControls?.incomingCall && incomingCallConversationId === currentConversationId
+  )
+  const showCurrentCallPanel = Boolean(
+    callControls?.currentCall && activeCallConversationId === currentConversationId
+  )
+  const showAvailableGroupCallBanner = Boolean(
+    callControls?.availableGroupCall && availableGroupCallConversationId === currentConversationId
+  )
 
   const senderById = useMemo(() => {
     const map = new Map()
@@ -671,7 +684,7 @@ const ChatWindow = ({
 
   const conversationId = normalizeId(conversation?._id || conversation?.conversationId)
   const isCallIdle = !callControls?.callPhase || callControls.callPhase === 'idle'
-  const canStartCall = Boolean(conversationId && isCallIdle)
+  const canStartCall = Boolean(conversationId && isCallIdle && !callControls?.availableGroupCall)
 
   const handleStartCall = async (callType) => {
     if (!canStartCall) return
@@ -694,6 +707,19 @@ const ChatWindow = ({
     } catch (error) {
       await notify({
         title: 'Không thể nhận cuộc gọi',
+        message: error?.response?.data?.error || error?.message || 'Vui lòng thử lại.',
+        confirmText: 'Đã hiểu',
+        variant: 'error',
+      })
+    }
+  }
+
+  const handleJoinAvailableCall = async (callId) => {
+    try {
+      await callControls?.joinCall?.(callId || callControls?.availableGroupCall?.callId)
+    } catch (error) {
+      await notify({
+        title: 'Không thể tham gia cuộc gọi',
         message: error?.response?.data?.error || error?.message || 'Vui lòng thử lại.',
         confirmText: 'Đã hiểu',
         variant: 'error',
@@ -745,11 +771,11 @@ const ChatWindow = ({
             </div>
           </div>
 
-          {callControls?.incomingCall && (
+          {showIncomingCallBanner && (
             <div className="call-banner incoming">
               <div>
                 <strong>Cuộc gọi {callControls.incomingCall.callType === 'video' ? 'video' : 'thoại'} đến</strong>
-                <span>{chatHeaderName}</span>
+                <span className="call-status-waiting">{chatHeaderName}</span>
               </div>
               <div className="call-banner-actions">
                 <button type="button" className="call-decline" onClick={callControls.declineCall} title="Từ chối">
@@ -762,7 +788,24 @@ const ChatWindow = ({
             </div>
           )}
 
-          {callControls?.currentCall && (
+          {showAvailableGroupCallBanner && (
+            <div className="call-banner active-group">
+              <div>
+                <strong>Cuộc gọi nhóm đang diễn ra</strong>
+                <span className="call-status-waiting">Bạn có thể tham gia cuộc gọi này</span>
+              </div>
+              <div className="call-banner-actions">
+                <button type="button" className="call-decline" onClick={callControls.dismissAvailableGroupCall} title="Ẩn">
+                  <FiX />
+                </button>
+                <button type="button" className="call-accept" onClick={() => handleJoinAvailableCall()} title="Tham gia">
+                  <FiPhone />
+                </button>
+              </div>
+            </div>
+          )}
+
+          {showCurrentCallPanel && (
             <div className={`call-panel ${callControls.currentCall.callType}`}>
               <audio ref={callControls.audioElementRef} autoPlay />
               {callControls.currentCall.callType === 'video' && (
@@ -787,7 +830,7 @@ const ChatWindow = ({
                   <div className="call-video-overlay">
                     <div className="call-panel-info">
                       <strong>Video call</strong>
-                      <span>
+                      <span className={callControls.callPhase === 'ringing' ? 'call-status-waiting' : ''}>
                         {callControls.callPhase === 'ringing'
                           ? 'Đang đổ chuông...'
                           : callControls.callPhase === 'active'
@@ -813,7 +856,7 @@ const ChatWindow = ({
                 <>
                   <div className="call-panel-info">
                     <strong>Audio call</strong>
-                    <span>
+                    <span className={callControls.callPhase === 'ringing' ? 'call-status-waiting' : ''}>
                       {callControls.callPhase === 'ringing'
                         ? 'Đang đổ chuông...'
                         : callControls.callPhase === 'active'
@@ -869,6 +912,7 @@ const ChatWindow = ({
                   onDeleteForAll={onDeleteForAll}
                   onReact={onReactMessage}
                   onShare={handleShareMessage}
+                  onJoinCall={handleJoinAvailableCall}
                   replyPreviewMap={replyPreviewMap}
                 />
               ))

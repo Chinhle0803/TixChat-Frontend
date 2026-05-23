@@ -169,9 +169,13 @@ export const createCallApi = (apiClient) => ({
   startCall: (conversationId, callType) =>
     apiClient.post('/calls/start', { conversationId, callType }),
   acceptCall: (callId) => apiClient.post(`/calls/${callId}/accept`),
+  joinCall: (callId) => apiClient.post(`/calls/${callId}/join`),
   declineCall: (callId) => apiClient.post(`/calls/${callId}/decline`),
   endCall: (callId) => apiClient.post(`/calls/${callId}/end`),
   getAttendee: (callId) => apiClient.post(`/calls/${callId}/attendee`),
+  getActiveConversationCall: (conversationId) =>
+    apiClient.get(`/calls/conversations/${conversationId}/active`),
+  getCurrentCall: () => apiClient.get('/calls/active/current'),
 })
 
 export const createNotificationApi = (apiClient) => ({

@@ -250,11 +250,8 @@ const ChatPage = () => {
   const currentConversationId = normalizeId(currentConversation?._id || currentConversation?.conversationId)
   const currentConversationPreference = conversationPreferences?.[currentConversationId] || createDefaultPreference()
   const callControls = realtimeCallControls || {}
-  const incomingCall = callControls?.incomingCall
   const activeCall = callControls?.currentCall
   const activeCallConversationId = normalizeId(activeCall?.conversationId)
-  const incomingCallConversationId = normalizeId(incomingCall?.conversationId)
-  const showGlobalIncomingCall = Boolean(incomingCall && incomingCallConversationId !== currentConversationId)
   const showGlobalActiveCall = Boolean(activeCall && activeCallConversationId && activeCallConversationId !== currentConversationId)
 
   const resolveCallTitle = useCallback((call) => {
@@ -354,39 +351,6 @@ const ChatPage = () => {
   const handleSelectConversation = async (conversation) => {
     await openConversation(conversation._id || conversation.conversationId)
     setShowSidebar(false)
-  }
-
-  const handleAcceptIncomingCall = async () => {
-    const conversationId = normalizeId(callControls?.incomingCall?.conversationId)
-
-    try {
-      if (conversationId && conversationId !== currentConversationId) {
-        await openConversation(conversationId)
-        setShowSidebar(false)
-      }
-
-      await callControls?.acceptCall?.()
-    } catch (error) {
-      await notify({
-        title: 'Không thể nhận cuộc gọi',
-        message: error?.response?.data?.error || error?.message || 'Vui lòng thử lại.',
-        confirmText: 'Đã hiểu',
-        variant: 'error',
-      })
-    }
-  }
-
-  const handleDeclineIncomingCall = async () => {
-    try {
-      await callControls?.declineCall?.()
-    } catch (error) {
-      await notify({
-        title: 'Không thể từ chối cuộc gọi',
-        message: error?.response?.data?.error || error?.message || 'Vui lòng thử lại.',
-        confirmText: 'Đã hiểu',
-        variant: 'error',
-      })
-    }
   }
 
   const handleRefreshConversationData = async () => {
@@ -865,28 +829,6 @@ const ChatPage = () => {
         </div>
       )}
 
-      {showGlobalIncomingCall && (
-        <div className="global-call-overlay" role="dialog" aria-modal="true">
-          <div className="global-call-card">
-            <div className="global-call-icon">
-              {incomingCall.callType === 'video' ? <FiVideo /> : <FiPhone />}
-            </div>
-            <div className="global-call-copy">
-              <span>Cuộc gọi {incomingCall.callType === 'video' ? 'video' : 'thoại'} đến</span>
-              <strong>{resolveCallTitle(incomingCall)}</strong>
-            </div>
-            <div className="global-call-actions">
-              <button type="button" className="global-call-decline" onClick={handleDeclineIncomingCall} title="Từ chối">
-                <FiPhoneOff />
-              </button>
-              <button type="button" className="global-call-accept" onClick={handleAcceptIncomingCall} title="Nghe máy">
-                <FiPhone />
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
       {showGlobalActiveCall && (
         <div className="global-active-call">
           <audio ref={callControls.audioElementRef} autoPlay />
@@ -913,7 +855,7 @@ const ChatPage = () => {
           )}
           <div className="global-active-call-info">
             <strong>{resolveCallTitle(activeCall)}</strong>
-            <span>
+            <span className={callControls.callPhase === 'ringing' ? 'call-status-waiting' : ''}>
               {callControls.callPhase === 'ringing'
                 ? 'Đang đổ chuông...'
                 : callControls.callPhase === 'active'

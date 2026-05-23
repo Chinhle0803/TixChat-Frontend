@@ -5,9 +5,10 @@ import {
   DefaultMeetingSession,
   LogLevel,
   MeetingSessionConfiguration,
+  MeetingSessionStatusCode,
 } from 'amazon-chime-sdk-js'
 import { callService } from '../services/api'
-import { getSocket } from '../services/socket'
+import { getSocket, initSocket } from '../services/socket'
 
 const normalizeId = (value) => {
   if (!value) return ''
@@ -46,9 +47,14 @@ const getCallDurationSeconds = (call) => {
   return Math.max(0, Math.floor((endedAt - acceptedAt) / 1000))
 }
 
+const isAvailableGroupCall = (call) =>
+  call?.status === 'accepted' &&
+  String(call?.viewerCallState || '').toLowerCase() === 'available'
+
 const useCall = ({ currentUserId } = {}) => {
   const [incomingCall, setIncomingCall] = useState(null)
   const [currentCall, setCurrentCall] = useState(null)
+  const [availableGroupCall, setAvailableGroupCall] = useState(null)
   const [callPhase, setCallPhase] = useState('idle')
   const [callError, setCallError] = useState('')
   const [activeDurationSeconds, setActiveDurationSeconds] = useState(0)
@@ -61,12 +67,16 @@ const useCall = ({ currentUserId } = {}) => {
   const pendingJoinInfoRef = useRef(null)
   const currentCallRef = useRef(null)
   const incomingCallRef = useRef(null)
+  const availableGroupCallRef = useRef(null)
+  const callPhaseRef = useRef('idle')
   const acceptingCallIdRef = useRef('')
   const audioElementRef = useRef(null)
   const localVideoRef = useRef(null)
   const remoteVideoRef = useRef(null)
   const remoteVideoElementsRef = useRef(new Map())
   const remoteTileStatesRef = useRef(new Map())
+  const reconcileInFlightRef = useRef('')
+  const failedMeetingCallIdsRef = useRef(new Set())
 
   useEffect(() => {
     currentCallRef.current = currentCall
@@ -75,6 +85,14 @@ const useCall = ({ currentUserId } = {}) => {
   useEffect(() => {
     incomingCallRef.current = incomingCall
   }, [incomingCall])
+
+  useEffect(() => {
+    availableGroupCallRef.current = availableGroupCall
+  }, [availableGroupCall])
+
+  useEffect(() => {
+    callPhaseRef.current = callPhase
+  }, [callPhase])
 
   const stopMeeting = useCallback(() => {
     const audioVideo = meetingSessionRef.current?.audioVideo
@@ -178,7 +196,18 @@ const useCall = ({ currentUserId } = {}) => {
     meetingSessionRef.current = meetingSession
 
     audioVideo.addObserver({
-      audioVideoDidStop: () => {
+      audioVideoDidStop: (sessionStatus) => {
+        const statusCode = typeof sessionStatus?.statusCode === 'function'
+          ? sessionStatus.statusCode()
+          : null
+
+        if (statusCode === MeetingSessionStatusCode.MeetingEnded) {
+          failedMeetingCallIdsRef.current.add(normalizeId(call?.callId))
+          setCallError('Cuộc gọi đã kết thúc.')
+          resetCallState()
+          return
+        }
+
         setIsVideoEnabled(false)
       },
       videoTileDidUpdate: (tileState) => bindVideoTile(audioVideo, tileState),
@@ -214,7 +243,8 @@ const useCall = ({ currentUserId } = {}) => {
     setCallPhase(call.status === 'accepted' ? 'active' : 'ringing')
     setActiveDurationSeconds(getCallDurationSeconds(call))
     setCallError('')
-  }, [bindVideoTile, stopMeeting])
+    failedMeetingCallIdsRef.current.delete(normalizeId(call?.callId))
+  }, [bindVideoTile, resetCallState, stopMeeting])
 
   const startCall = useCallback(async (conversationId, callType) => {
     if (!conversationId || callPhase !== 'idle') return
@@ -222,6 +252,7 @@ const useCall = ({ currentUserId } = {}) => {
     try {
       setCallError('')
       setLastCallNotice(null)
+      setAvailableGroupCall(null)
       setCallPhase('starting')
       const response = await callService.startCall(conversationId, callType)
       pendingJoinInfoRef.current = response.data
@@ -246,9 +277,11 @@ const useCall = ({ currentUserId } = {}) => {
       setLastCallNotice(null)
       setCurrentCall(incomingCall)
       setIncomingCall(null)
+      setAvailableGroupCall(null)
       setCallPhase('joining')
       const response = await callService.acceptCall(callId)
       await joinMeeting(response.data)
+      acceptingCallIdRef.current = ''
       setLastCallNotice({
         type: 'accepted',
         call: response.data.call,
@@ -261,6 +294,34 @@ const useCall = ({ currentUserId } = {}) => {
       throw error
     }
   }, [incomingCall, joinMeeting, resetCallState])
+
+  const joinCall = useCallback(async (targetCallId = '') => {
+    const callId = normalizeId(targetCallId || availableGroupCallRef.current?.callId || incomingCallRef.current?.callId)
+    if (!callId) return
+
+    acceptingCallIdRef.current = callId
+
+    try {
+      setCallError('')
+      setLastCallNotice(null)
+      setAvailableGroupCall(null)
+      setIncomingCall(null)
+      setCallPhase('joining')
+      const response = await callService.joinCall(callId)
+      await joinMeeting(response.data)
+      acceptingCallIdRef.current = ''
+      setLastCallNotice({
+        type: 'accepted',
+        call: response.data.call,
+        durationSeconds: 0,
+      })
+    } catch (error) {
+      acceptingCallIdRef.current = ''
+      resetCallState()
+      setCallError(error?.response?.data?.error || error?.message || 'Cannot join call')
+      throw error
+    }
+  }, [joinMeeting, resetCallState])
 
   const declineCall = useCallback(async () => {
     const callId = incomingCall?.callId || currentCallRef.current?.callId
@@ -278,7 +339,10 @@ const useCall = ({ currentUserId } = {}) => {
     }
 
     try {
-      await callService.endCall(callId)
+      const response = await callService.endCall(callId)
+      if (response?.data?.partial && isAvailableGroupCall(response?.data?.call)) {
+        setAvailableGroupCall(response.data.call)
+      }
     } finally {
       resetCallState()
     }
@@ -316,8 +380,110 @@ const useCall = ({ currentUserId } = {}) => {
     }
   }, [isVideoEnabled])
 
+  const reconcileCallState = useCallback(async () => {
+    if (!currentUserId) return
+
+    try {
+      const response = await callService.getCurrentCall()
+      const call = response?.data?.call || null
+
+      if (!call?.callId) {
+        failedMeetingCallIdsRef.current.clear()
+        setAvailableGroupCall(null)
+        if (incomingCallRef.current?.callId || currentCallRef.current?.callId) {
+          resetCallState()
+        }
+        return
+      }
+
+      const recoveryKey = `${normalizeId(call.callId)}:${String(call.status || '')}`
+      if (reconcileInFlightRef.current === recoveryKey) {
+        return
+      }
+      reconcileInFlightRef.current = recoveryKey
+
+      const normalizedCurrentUserId = normalizeId(currentUserId)
+      const isCaller = normalizeId(call.callerId) === normalizedCurrentUserId
+      const isAlreadyTrackingIncoming = incomingCallRef.current?.callId === call.callId
+      const isAlreadyTrackingCurrent = currentCallRef.current?.callId === call.callId
+
+      if (call.status === 'ringing') {
+        setAvailableGroupCall(null)
+        if (isCaller) {
+          const attendeeResponse = await callService.getAttendee(call.callId)
+          pendingJoinInfoRef.current = attendeeResponse?.data || null
+          setIncomingCall(null)
+          setCurrentCall(call)
+          setCallPhase('ringing')
+          setCallError('')
+          return
+        }
+
+        if (!isAlreadyTrackingIncoming && !isAlreadyTrackingCurrent) {
+          setLastCallNotice(null)
+          setCurrentCall(null)
+          setIncomingCall(call)
+          setCallPhase('incoming')
+          setCallError('')
+        }
+        return
+      }
+
+      if (call.status === 'accepted') {
+        if (isAvailableGroupCall(call)) {
+          if (currentCallRef.current?.callId === call.callId || incomingCallRef.current?.callId === call.callId) {
+            resetCallState()
+          }
+          setIncomingCall(null)
+          setCurrentCall(null)
+          setCallPhase('idle')
+          setAvailableGroupCall(call)
+          return
+        }
+
+        setAvailableGroupCall(null)
+
+        if (failedMeetingCallIdsRef.current.has(normalizeId(call.callId))) {
+          return
+        }
+
+        if (meetingSessionRef.current && isAlreadyTrackingCurrent) {
+          setCurrentCall(call)
+          setIncomingCall(null)
+          setCallPhase('active')
+          setCallError('')
+          setActiveDurationSeconds(getCallDurationSeconds(call))
+          return
+        }
+
+        if (isAlreadyTrackingCurrent && callPhaseRef.current === 'joining') {
+          return
+        }
+
+        const attendeeResponse = await callService.getAttendee(call.callId)
+        pendingJoinInfoRef.current = attendeeResponse?.data || null
+        setIncomingCall(null)
+        setCurrentCall(call)
+        setCallPhase('joining')
+        await joinMeeting(attendeeResponse?.data)
+      }
+    } catch (error) {
+      const status = Number(error?.response?.status || 0)
+      if (status === 400 || status === 404) {
+        if (incomingCallRef.current?.callId || currentCallRef.current?.callId) {
+          resetCallState()
+        }
+        return
+      }
+
+      console.warn('Failed to reconcile call state:', error?.response?.data?.error || error?.message || error)
+    } finally {
+      reconcileInFlightRef.current = ''
+    }
+  }, [currentUserId, joinMeeting, resetCallState])
+
   useEffect(() => {
-    const socket = getSocket()
+    const socket = getSocket() || initSocket()
     if (!socket) return undefined
 
     const handleIncoming = ({ call }) => {
@@ -328,6 +494,7 @@ const useCall = ({ currentUserId } = {}) => {
       if (currentCallRef.current?.callId) return
 
       setLastCallNotice(null)
+      setAvailableGroupCall(null)
       setIncomingCall(call)
       setCallPhase('incoming')
     }
@@ -335,6 +502,13 @@ const useCall = ({ currentUserId } = {}) => {
     const handleAccepted = async ({ call }) => {
       if (!call?.callId) return
       if (acceptingCallIdRef.current === call.callId) return
+
+      if (isAvailableGroupCall(call) && currentCallRef.current?.callId !== call.callId) {
+        setIncomingCall(null)
+        setAvailableGroupCall(call)
+        setCallPhase('idle')
+        return
+      }
 
       if (currentCallRef.current?.callId === call.callId) {
         const pendingJoinInfo = pendingJoinInfoRef.current
@@ -359,30 +533,73 @@ const useCall = ({ currentUserId } = {}) => {
       }
     }
 
+    const handleAvailableGroupCall = ({ call }) => {
+      if (!isAvailableGroupCall(call)) return
+      if (normalizeId(call.callerId) === normalizeId(currentUserId)) return
+      if (currentCallRef.current?.callId === call.callId && meetingSessionRef.current) return
+      setIncomingCall(null)
+      setAvailableGroupCall(call)
+      setCallPhase('idle')
+    }
+
+    const handleParticipantChanged = ({ call }) => {
+      if (!call?.callId) return
+      if (isAvailableGroupCall(call)) {
+        setAvailableGroupCall(call)
+        return
+      }
+
+      if (currentCallRef.current?.callId === call.callId) {
+        setCurrentCall(call)
+      }
+    }
+
+    const handleReconnect = () => {
+      reconcileCallState().catch((error) => {
+        console.warn('Failed to recover call after reconnect:', error?.message || error)
+      })
+    }
+
     const handleTerminal = ({ call }) => {
       if (!call?.callId) return
       const activeId = currentCallRef.current?.callId
       const incomingId = incomingCall?.callId
-      if (call.callId === activeId || call.callId === incomingId) {
+      const availableId = availableGroupCallRef.current?.callId
+      if (call.callId === activeId || call.callId === incomingId || call.callId === availableId) {
         setLastCallNotice({
           type: call.status || 'ended',
           call,
           durationSeconds: getCallDurationSeconds(call),
         })
+        setAvailableGroupCall(null)
         resetCallState()
       }
     }
 
     socket.on('call:incoming', handleIncoming)
     socket.on('call:accepted', handleAccepted)
+    socket.on('call:active_available', handleAvailableGroupCall)
+    socket.on('call:participant_joined', handleParticipantChanged)
+    socket.on('call:participant_left', handleParticipantChanged)
+    socket.on('connect', handleReconnect)
     terminalEvents.forEach((eventName) => socket.on(eventName, handleTerminal))
 
     return () => {
       socket.off('call:incoming', handleIncoming)
       socket.off('call:accepted', handleAccepted)
+      socket.off('call:active_available', handleAvailableGroupCall)
+      socket.off('call:participant_joined', handleParticipantChanged)
+      socket.off('call:participant_left', handleParticipantChanged)
+      socket.off('connect', handleReconnect)
       terminalEvents.forEach((eventName) => socket.off(eventName, handleTerminal))
     }
-  }, [currentUserId, incomingCall?.callId, resetCallState])
+  }, [currentUserId, incomingCall?.callId, reconcileCallState, resetCallState])
+
+  useEffect(() => {
+    reconcileCallState().catch((error) => {
+      console.warn('Failed to hydrate current call state:', error?.message || error)
+    })
+  }, [reconcileCallState])
 
   useEffect(() => {
     if (callPhase !== 'active' || !currentCall) return undefined
@@ -401,6 +618,7 @@ const useCall = ({ currentUserId } = {}) => {
   return {
     incomingCall,
     currentCall,
+    availableGroupCall,
     callPhase,
     callError,
     activeDurationSeconds,
@@ -415,10 +633,12 @@ const useCall = ({ currentUserId } = {}) => {
     setRemoteVideoElement,
     startCall,
     acceptCall,
+    joinCall,
     declineCall,
     endCall,
     toggleMute,
     toggleVideo,
+    dismissAvailableGroupCall: () => setAvailableGroupCall(null),
     clearLastCallNotice: () => setLastCallNotice(null),
     clearCallError: () => setCallError(''),
   }

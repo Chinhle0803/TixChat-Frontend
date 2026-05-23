@@ -220,10 +220,16 @@ export const setupSocketListeners = (socket) => {
     const messageId = data.message?._id || data.message?.messageId || data.messageId
     if (!messageId) return
 
+    if (data.message) {
+      useChatStore.getState().updateMessage(messageId, data.message)
+      return
+    }
+
     useChatStore.getState().updateMessage(messageId, {
-      content: data.message?.content || data.content,
-      isEdited: data.message?.isEdited ?? data.isEdited ?? true,
-      editedAt: data.message?.editedAt || data.editedAt || Date.now(),
+      content: data.content,
+      metadata: data.metadata,
+      isEdited: data.isEdited ?? true,
+      editedAt: data.editedAt || Date.now(),
     })
   })
 

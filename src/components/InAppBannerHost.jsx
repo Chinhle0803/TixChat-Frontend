@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react'
-import { FiBell, FiMessageSquare, FiPhone, FiPhoneCall, FiX } from 'react-icons/fi'
+import { FiBell, FiMessageSquare, FiPhoneCall, FiX } from 'react-icons/fi'
 import { useRealtimeUiStore } from '../store/realtimeUiStore'
 import '../styles/InAppBannerHost.css'
 
@@ -41,6 +41,7 @@ export default function InAppBannerHost({
         const conversationId = String(banner?.data?.conversationId || '').trim()
         const callId = String(banner?.data?.callId || '').trim()
         const isCallBanner = banner.type === 'call'
+        const isJoinCallBanner = isCallBanner && banner?.data?.action === 'join'
 
         const handleOpen = () => {
           dismissBanner(banner.id)
@@ -49,6 +50,14 @@ export default function InAppBannerHost({
             return
           }
           onOpenConversation?.(conversationId)
+        }
+
+        const handleSecondaryCallAction = () => {
+          if (isJoinCallBanner) {
+            dismissBanner(banner.id)
+            return
+          }
+          onDeclineCall?.(callId)
         }
 
         return (
@@ -61,7 +70,7 @@ export default function InAppBannerHost({
               type="button"
               className="inapp-banner-main"
               onClick={handleOpen}
-              aria-label={isCallBanner ? 'Mở cuộc gọi' : 'Mở cuộc trò chuyện'}
+              aria-label={isCallBanner ? 'Mo cuoc goi' : 'Mo cuoc tro chuyen'}
             >
               <span className="inapp-banner-icon" aria-hidden="true">
                 {getBannerIcon(banner.type)}
@@ -78,16 +87,16 @@ export default function InAppBannerHost({
                   <button
                     type="button"
                     className="inapp-banner-action secondary"
-                    onClick={() => onDeclineCall?.(callId)}
+                    onClick={handleSecondaryCallAction}
                   >
-                    Từ chối
+                    {isJoinCallBanner ? 'An' : 'Tu choi'}
                   </button>
                   <button
                     type="button"
                     className="inapp-banner-action primary"
                     onClick={() => onAcceptCall?.(callId, conversationId)}
                   >
-                    Nghe máy
+                    {isJoinCallBanner ? 'Tham gia' : 'Nghe may'}
                   </button>
                 </>
               ) : (
@@ -96,7 +105,7 @@ export default function InAppBannerHost({
                   className="inapp-banner-action primary"
                   onClick={handleOpen}
                 >
-                  Mở chat
+                  Mo chat
                 </button>
               )}
 
@@ -104,7 +113,7 @@ export default function InAppBannerHost({
                 type="button"
                 className="inapp-banner-close"
                 onClick={() => dismissBanner(banner.id)}
-                aria-label="Đóng thông báo"
+                aria-label="Dong thong bao"
               >
                 <FiX />
               </button>
