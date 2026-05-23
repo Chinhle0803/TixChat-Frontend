@@ -284,6 +284,23 @@
   animation: scaleIn 0.3s ease;
 }
 
+.form-input-wrapper .label-status {
+  position: absolute;
+  right: 16px;
+  font-size: 16px;
+  pointer-events: none;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+}
+
+/* Khi có thêm nút bật/tắt hiển thị mật khẩu (form-icon-btn), dịch dấu tick sang trái */
+.form-input-wrapper .form-icon-btn ~ .label-status {
+  right: 48px;
+}
+
 @keyframes scaleIn {
   from {
     opacity: 0;

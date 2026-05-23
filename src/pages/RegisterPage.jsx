@@ -18,7 +18,7 @@ export default function RegisterPage({ onSwitchToLogin, onSuccess }) {
     if (!username) return 'Tên người dùng là bắt buộc'
     if (username.length < 3) return 'Tên người dùng phải có ít nhất 3 ký tự'
     if (username.length > 30) return 'Tên người dùng phải có tối đa 30 ký tự'
-    if (!/^[a-zA-Z0-9]*$/.test(username)) return 'Tên người dùng chỉ có thể chứa chữ cái và số'
+    if (!/^[\p{L}\p{N}_ ]*$/u.test(username)) return 'Tên người dùng chỉ có thể chứa chữ cái, số, khoảng trắng và dấu gạch dưới'
     return ''
   }
 
@@ -152,7 +152,6 @@ export default function RegisterPage({ onSwitchToLogin, onSuccess }) {
         <div className="form-group">
           <label htmlFor="username" className="form-label">
             <span className="label-text">Tên người dùng</span>
-            {!errors.username && formData.username && <span className="label-status">✓</span>}
           </label>
           <div className="form-input-wrapper">
             <input
@@ -166,6 +165,7 @@ export default function RegisterPage({ onSwitchToLogin, onSuccess }) {
               disabled={loading}
               autoComplete="username"
             />
+            {!errors.username && formData.username && <span className="label-status">✓</span>}
           </div>
           {errors.username && <span className="form-error">{errors.username}</span>}
         </div>
@@ -174,7 +174,6 @@ export default function RegisterPage({ onSwitchToLogin, onSuccess }) {
         <div className="form-group">
           <label htmlFor="email" className="form-label">
             <span className="label-text">Địa chỉ Email</span>
-            {!errors.email && formData.email && <span className="label-status">✓</span>}
           </label>
           <div className="form-input-wrapper">
             <input
@@ -188,6 +187,7 @@ export default function RegisterPage({ onSwitchToLogin, onSuccess }) {
               disabled={loading}
               autoComplete="email"
             />
+            {!errors.email && formData.email && <span className="label-status">✓</span>}
           </div>
           {errors.email && <span className="form-error">{errors.email}</span>}
         </div>
@@ -196,7 +196,6 @@ export default function RegisterPage({ onSwitchToLogin, onSuccess }) {
         <div className="form-group">
           <label htmlFor="fullName" className="form-label">
             <span className="label-text">Tên đầy đủ</span>
-            {!errors.fullName && formData.fullName && <span className="label-status">✓</span>}
           </label>
           <div className="form-input-wrapper">
             <input
@@ -210,6 +209,7 @@ export default function RegisterPage({ onSwitchToLogin, onSuccess }) {
               disabled={loading}
               autoComplete="name"
             />
+            {!errors.fullName && formData.fullName && <span className="label-status">✓</span>}
           </div>
           {errors.fullName && <span className="form-error">{errors.fullName}</span>}
         </div>
@@ -218,7 +218,6 @@ export default function RegisterPage({ onSwitchToLogin, onSuccess }) {
         <div className="form-group">
           <label htmlFor="password" className="form-label">
             <span className="label-text">Mật khẩu</span>
-            {!errors.password && formData.password && <span className="label-status">✓</span>}
           </label>
           <div className="form-input-wrapper">
             <input
@@ -257,7 +256,6 @@ export default function RegisterPage({ onSwitchToLogin, onSuccess }) {
         <div className="form-group">
           <label htmlFor="confirmPassword" className="form-label">
             <span className="label-text">Xác nhận mật khẩu</span>
-            {!errors.confirmPassword && formData.confirmPassword && <span className="label-status">✓</span>}
           </label>
           <div className="form-input-wrapper">
             <input
@@ -287,7 +285,6 @@ export default function RegisterPage({ onSwitchToLogin, onSuccess }) {
         {/* Auth Error Message */}
         {authError && (
           <div className="form-alert alert-error">
-            <span className="alert-icon">!</span>
             <span className="alert-text">{authError}</span>
           </div>
         )}

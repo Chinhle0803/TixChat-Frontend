@@ -64,7 +64,6 @@ export default function LoginPage({ onSwitchToRegister, onSwitchToForgot, onSucc
         <div className="form-group">
           <label htmlFor="email" className="form-label">
             <span className="label-text">Địa chỉ Email</span>
-            {email && <span className="label-status">✓</span>}
           </label>
           <div className="form-input-wrapper">
             <input
@@ -82,6 +81,7 @@ export default function LoginPage({ onSwitchToRegister, onSwitchToForgot, onSucc
               disabled={loading}
               autoComplete="email"
             />
+            {email && <span className="label-status">✓</span>}
           </div>
           {errors.email && <span className="form-error">{errors.email}</span>}
         </div>
@@ -90,7 +90,6 @@ export default function LoginPage({ onSwitchToRegister, onSwitchToForgot, onSucc
         <div className="form-group">
           <label htmlFor="password" className="form-label">
             <span className="label-text">Mật khẩu</span>
-            {password && <span className="label-status">✓</span>}
           </label>
           <div className="form-input-wrapper">
             <input
@@ -124,7 +123,6 @@ export default function LoginPage({ onSwitchToRegister, onSwitchToForgot, onSucc
         {/* Auth Error Message */}
         {authError && (
           <div className="form-alert alert-error">
-            <span className="alert-icon">!</span>
             <span className="alert-text">{authError}</span>
           </div>
         )}
