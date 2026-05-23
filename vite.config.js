@@ -7,12 +7,38 @@ const normalizeProxyTarget = (apiUrl = '') =>
     .replace(/\/api\/?$/, '')
     .replace(/\/$/, '')
 
+const patchAxiosFetchAdapter = () => ({
+  name: 'patch-axios-fetch-adapter',
+  enforce: 'pre',
+  transform(code, id) {
+    if (!id.includes('/node_modules/axios/')) return null
+    if (!code.includes('const globalFetchAPI = (({ Request, Response }) => ({')) return null
+
+    let nextCode = code.replace(
+      'const globalFetchAPI = (({ Request, Response }) => ({',
+      'const globalFetchAPI = (({ Request, Response } = {}) => ({'
+    )
+
+    nextCode = nextCode.replace(
+      'const { ReadableStream, TextEncoder } = utils.global;',
+      'const { ReadableStream, TextEncoder } = utils.global || {};'
+    )
+
+    if (nextCode === code) return null
+
+    return {
+      code: nextCode,
+      map: null,
+    }
+  },
+})
+
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
   const proxyTarget = normalizeProxyTarget(env.VITE_API_URL)
 
   return {
-    plugins: [react()],
+    plugins: [patchAxiosFetchAdapter(), react()],
     define: {
       global: 'globalThis',
     },
