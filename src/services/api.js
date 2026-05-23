@@ -1,14 +1,16 @@
 import axios from 'axios'
 import useAuthStore from '../store/authStore'
 import { createChatApiServices } from './apiContracts.js'
-import { resolveApiBaseUrl } from '../utils/runtimeUrl.js'
+import { getNgrokBypassHeaders, resolveApiBaseUrl } from '../utils/runtimeUrl.js'
 
 export const API_URL = resolveApiBaseUrl(import.meta.env.VITE_API_URL)
+const ngrokHeaders = getNgrokBypassHeaders(API_URL)
 
 const apiClient = axios.create({
   baseURL: API_URL,
   headers: {
     'Content-Type': 'application/json',
+    ...ngrokHeaders,
   },
 })
 
@@ -37,6 +39,11 @@ apiClient.interceptors.response.use(
         const { refreshToken } = useAuthStore.getState()
         const response = await axios.post(`${API_URL}/auth/refresh-token`, {
           refreshToken,
+        }, {
+          headers: {
+            'Content-Type': 'application/json',
+            ...ngrokHeaders,
+          },
         })
 
         const { accessToken } = response.data

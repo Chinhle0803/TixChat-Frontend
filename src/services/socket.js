@@ -4,9 +4,10 @@ import useAuthStore from '../store/authStore'
 import useChatStore from '../store/chatStore'
 import { conversationService } from './api'
 import { isConversationMuted, notifyIncomingMessage } from './browserNotifications.js'
-import { resolveSocketBaseUrl } from '../utils/runtimeUrl.js'
+import { isNgrokUrl, resolveSocketBaseUrl } from '../utils/runtimeUrl.js'
 
 const SOCKET_URL = resolveSocketBaseUrl(import.meta.env.VITE_SOCKET_URL)
+const socketTransports = isNgrokUrl(SOCKET_URL) ? ['websocket'] : undefined
 
 let socket = null
 let socketCore = null
@@ -49,6 +50,7 @@ export const initSocket = () => {
       reconnectionDelay: 1000,
       reconnectionDelayMax: 5000,
       reconnectionAttempts: 5,
+      transports: socketTransports,
     })
   }
 

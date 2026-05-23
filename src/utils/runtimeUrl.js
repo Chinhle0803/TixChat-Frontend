@@ -48,6 +48,24 @@ const resolveLocalBackendOrigin = () => {
 
 export const normalizeBaseUrl = (value) => trimTrailingSlash(value)
 
+export const isNgrokUrl = (value = '') => {
+  const normalizedUrl = trimTrailingSlash(value)
+  if (!normalizedUrl) return false
+
+  try {
+    const { hostname } = new URL(normalizedUrl)
+    return hostname.endsWith('.ngrok-free.dev') || hostname.endsWith('.ngrok.app')
+  } catch {
+    return false
+  }
+}
+
+export const getNgrokBypassHeaders = (value = '') => (
+  isNgrokUrl(value)
+    ? { 'ngrok-skip-browser-warning': 'true' }
+    : {}
+)
+
 export const resolveApiBaseUrl = (configuredUrl) => {
   const normalizedUrl = upgradeToHttpsWhenNeeded(configuredUrl)
   if (normalizedUrl) return normalizedUrl

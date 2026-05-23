@@ -1,10 +1,11 @@
 import { useState, useEffect, useRef } from 'react'
 import { useAuth } from '../hooks/useAuth'
 import useAuthStore from '../store/authStore'
-import { resolveApiBaseUrl } from '../utils/runtimeUrl.js'
+import { getNgrokBypassHeaders, resolveApiBaseUrl } from '../utils/runtimeUrl.js'
 import '../styles/VerifyOTP.css'
 
 const API_URL = resolveApiBaseUrl(import.meta.env.VITE_API_URL)
+const ngrokHeaders = getNgrokBypassHeaders(API_URL)
 
 export default function VerifyOTPPage({ email, onSuccess }) {
   const { loading, error: authError } = useAuth()
@@ -74,7 +75,10 @@ export default function VerifyOTPPage({ email, onSuccess }) {
       // Call API to resend OTP
       const response = await fetch(`${API_URL}/auth/send-email-verification-otp`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...ngrokHeaders,
+        },
         body: JSON.stringify({ email }),
       })
 
@@ -104,7 +108,10 @@ export default function VerifyOTPPage({ email, onSuccess }) {
       setError('')
       const response = await fetch(`${API_URL}/auth/verify-email-otp`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...ngrokHeaders,
+        },
         body: JSON.stringify({ email, otp }),
       })
 
