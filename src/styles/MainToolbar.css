@@ -1,0 +1,229 @@
+.main-toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 60;
+  height: 100vh;
+  min-width: 0;
+  padding: 12px;
+  border-right: 1px solid var(--border);
+  background: var(--sidebar);
+  color: var(--sidebar-foreground);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.main-toolbar-brand {
+  min-height: 48px;
+  border-radius: var(--radius-lg);
+  color: var(--foreground);
+  background: var(--accent);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 10px;
+  overflow: hidden;
+  transition: background 0.2s ease, transform 0.2s ease, padding 0.2s ease, width 0.2s ease;
+}
+
+.main-toolbar-brand a {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-md);
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+}
+
+.main-toolbar-brand img {
+  width: 34px;
+  height: 34px;
+  object-fit: contain;
+  display: block;
+}
+
+.main-toolbar-brand strong {
+  font-size: 15px;
+  font-weight: 750;
+  white-space: nowrap;
+  transition: opacity 0.16s ease, transform 0.16s ease;
+}
+
+.main-toolbar-actions,
+.main-toolbar-footer {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.main-toolbar-actions {
+  flex: 1;
+}
+
+.main-toolbar-action {
+  position: relative;
+  isolation: isolate;
+  width: 100%;
+  min-height: 40px;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--muted-foreground);
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 10px;
+  padding: 0 10px;
+  font: inherit;
+  font-weight: 650;
+  text-decoration: none;
+  cursor: pointer;
+  overflow: hidden;
+  transition: background 0.18s ease, color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
+}
+
+.main-toolbar-action::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(135deg, color-mix(in srgb, var(--primary) 14%, transparent), color-mix(in srgb, var(--sidebar-accent) 72%, transparent));
+  opacity: 0;
+  transform: scale(0.97);
+  transform-origin: left center;
+  transition: opacity 0.18s ease, transform 0.18s ease;
+  z-index: -1;
+}
+
+.main-toolbar-action svg {
+  width: 18px;
+  height: 18px;
+  font-size: 17px;
+  flex: 0 0 18px;
+  transition: transform 0.18s ease, color 0.18s ease;
+}
+
+.main-toolbar-action span {
+  transition: opacity 0.16s ease, transform 0.16s ease;
+}
+
+.main-toolbar-action:hover,
+.main-toolbar-action.active {
+  color: var(--sidebar-accent-foreground);
+}
+
+.main-toolbar-action:hover {
+  transform: translateX(2px);
+}
+
+.main-toolbar-action:hover::before,
+.main-toolbar-action.active::before {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.main-toolbar-action:hover svg,
+.main-toolbar-action.active svg {
+  transform: scale(1.05);
+}
+
+.main-toolbar-action.active {
+  box-shadow: inset 3px 0 0 var(--primary);
+}
+
+.main-toolbar.collapsed {
+  align-items: center;
+}
+
+.main-toolbar.collapsed .main-toolbar-actions,
+.main-toolbar.collapsed .main-toolbar-footer {
+  width: 100%;
+  align-items: center;
+}
+
+.main-toolbar.collapsed .main-toolbar-brand {
+  width: 48px;
+  justify-content: center;
+  padding: 0;
+}
+
+.main-toolbar.collapsed .main-toolbar-brand strong,
+.main-toolbar.collapsed .main-toolbar-action span {
+  display: none;
+  opacity: 0;
+  transform: translateX(-6px);
+  pointer-events: none;
+}
+
+.main-toolbar.collapsed .main-toolbar-action {
+  width: 44px;
+  min-width: 44px;
+  justify-content: center;
+  align-items: center;
+  padding: 0;
+  gap: 0;
+}
+
+.main-toolbar.collapsed .main-toolbar-action:hover {
+  transform: none;
+}
+
+.main-toolbar.collapsed .main-toolbar-action.active {
+  box-shadow: inset 0 -3px 0 var(--primary);
+}
+
+@media (max-width: 768px) {
+  .main-toolbar {
+    position: sticky;
+    top: 0;
+    height: 58px;
+    width: 100%;
+    border-right: 0;
+    border-bottom: 1px solid var(--border);
+    border-radius: 0;
+    flex-direction: row;
+    align-items: center;
+    padding: 8px 10px;
+    gap: 10px;
+    overflow-x: auto;
+  }
+
+  .main-toolbar-brand {
+    min-width: 44px;
+    width: 44px;
+    min-height: 40px;
+    justify-content: center;
+    padding: 0;
+  }
+
+  .main-toolbar-brand strong,
+  .main-toolbar-action span {
+    display: none;
+  }
+
+  .main-toolbar-actions,
+  .main-toolbar-footer {
+    flex-direction: row;
+    gap: 8px;
+  }
+
+  .main-toolbar-actions {
+    flex: 1;
+  }
+
+  .main-toolbar-action {
+    width: 42px;
+    min-width: 42px;
+    justify-content: center;
+    padding: 0;
+  }
+
+  .main-toolbar-action:hover {
+    transform: translateY(-1px);
+  }
+
+  .main-toolbar-toggle {
+    display: none;
+  }
+}

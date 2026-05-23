@@ -1,0 +1,128 @@
+.app-dialog-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 120;
+  background: rgba(15, 23, 42, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+.app-dialog-modal {
+  width: min(420px, 100%);
+  background: var(--popover);
+  color: var(--popover-foreground);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+  box-shadow: var(--shadow-lg);
+}
+
+.app-dialog-header {
+  padding: 14px 16px 10px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.app-dialog-title {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.app-dialog-title.info {
+  color: #111827;
+}
+
+.app-dialog-title.success {
+  color: #047857;
+}
+
+.app-dialog-title.warning {
+  color: #b45309;
+}
+
+.app-dialog-title.error {
+  color: #b91c1c;
+}
+
+.app-dialog-body {
+  padding: 14px 16px;
+}
+
+.app-dialog-body p {
+  margin: 0;
+  color: #374151;
+  white-space: pre-line;
+  line-height: 1.45;
+}
+
+.app-dialog-input {
+  width: 100%;
+  margin-top: 10px;
+  box-sizing: border-box;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  padding: 9px 10px;
+  font-size: 14px;
+  color: #111827;
+}
+
+.app-dialog-input:focus {
+  outline: none;
+  border-color: #111827;
+  box-shadow: 0 0 0 2px rgba(17, 24, 39, 0.08);
+}
+
+.app-dialog-footer {
+  padding: 10px 16px 14px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.app-dialog-btn {
+  border-radius: 8px;
+  border: 1px solid #d1d5db;
+  background: #ffffff;
+  color: #111827;
+  padding: 8px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.app-dialog-btn.primary {
+  border-color: #111827;
+  background: #111827;
+  color: #ffffff;
+}
+
+.app-dialog-btn.primary.success {
+  border-color: #047857;
+  background: #047857;
+}
+
+.app-dialog-btn.primary.warning {
+  border-color: #b45309;
+  background: #b45309;
+}
+
+.app-dialog-btn.primary.error {
+  border-color: #b91c1c;
+  background: #b91c1c;
+}
+
+@media (max-width: 640px) {
+  .app-dialog-modal {
+    width: 100%;
+  }
+
+  .app-dialog-footer {
+    flex-direction: column-reverse;
+  }
+
+  .app-dialog-btn {
+    width: 100%;
+  }
+}

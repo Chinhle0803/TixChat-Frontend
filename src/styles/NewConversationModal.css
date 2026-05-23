@@ -1,0 +1,147 @@
+.new-conversation-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.new-conversation-modal {
+  width: min(760px, 92vw);
+  max-height: 88vh;
+  overflow-y: auto;
+  background: var(--popover);
+  color: var(--popover-foreground);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-2xl);
+  box-shadow: var(--shadow-lg);
+  padding: 18px;
+}
+
+.new-conversation-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.new-conversation-header h3 {
+  margin: 0;
+  color: #1f2937;
+}
+
+.new-conversation-header button {
+  border: none;
+  background: #f3f4f6;
+  border-radius: 8px;
+  cursor: pointer;
+  padding: 6px 10px;
+}
+
+.new-conversation-search {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.new-conversation-search input {
+  flex: 1;
+  border: 1px solid #d1d5db;
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 14px;
+}
+
+.new-conversation-search button {
+  border: none;
+  border-radius: 10px;
+  padding: 10px 14px;
+  background: #2563eb;
+  color: #fff;
+  cursor: pointer;
+}
+
+.new-conversation-section {
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 12px;
+  margin-bottom: 12px;
+}
+
+.new-conversation-section h4 {
+  margin: 0 0 10px;
+  color: #111827;
+}
+
+.empty-state {
+  color: #6b7280;
+  font-size: 14px;
+  margin: 0;
+}
+
+.user-result-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+  border-top: 1px dashed #e5e7eb;
+}
+
+.user-result-item:first-of-type {
+  border-top: none;
+}
+
+.user-name {
+  margin: 0;
+  font-weight: 600;
+  color: #111827;
+}
+
+.user-subtext {
+  margin: 2px 0 0;
+  color: #6b7280;
+  font-size: 13px;
+}
+
+.user-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.user-actions button {
+  border: none;
+  border-radius: 999px;
+  padding: 7px 12px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.user-actions button.primary {
+  background: #2563eb;
+  color: #fff;
+}
+
+.user-actions button.secondary {
+  background: #e5e7eb;
+  color: #1f2937;
+}
+
+.user-actions button.success {
+  background: #d1fae5;
+  color: #047857;
+}
+
+.user-actions button.danger {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.user-actions button:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}

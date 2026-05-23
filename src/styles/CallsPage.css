@@ -1,0 +1,121 @@
+.calls-page {
+  min-height: 100vh;
+  display: block;
+  background: var(--background);
+  color: var(--tc-neutral-900);
+}
+
+.calls-nav {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  border-right: 1px solid var(--border);
+  background: var(--sidebar);
+  padding: 18px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.calls-nav a {
+  min-height: 44px;
+  border-radius: var(--radius-md);
+  color: var(--muted-foreground);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 12px;
+  text-decoration: none;
+  font-weight: 650;
+}
+
+.calls-nav a:hover {
+  background: var(--muted);
+  color: var(--foreground);
+}
+
+.calls-shell {
+  width: min(1040px, calc(100% - 32px));
+  margin: 0 auto;
+  padding: 28px 0;
+  display: grid;
+  gap: 18px;
+}
+
+.calls-header {
+  border: 1px solid var(--tc-border);
+  border-radius: var(--tc-radius-xl);
+  background: var(--surface-tint);
+  padding: 24px;
+  box-shadow: var(--tc-shadow-sm);
+}
+
+.calls-header span {
+  color: var(--tc-secondary);
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.calls-header h1 {
+  margin: 6px 0;
+  font-size: 30px;
+}
+
+.calls-header p {
+  margin: 0;
+  color: var(--tc-neutral-500);
+}
+
+.calls-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.call-card {
+  border: 1px solid var(--tc-border);
+  border-radius: var(--tc-radius-lg);
+  background: var(--card);
+  padding: 16px;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 12px;
+  box-shadow: var(--tc-shadow-sm);
+}
+
+.call-card.active {
+  border-color: color-mix(in srgb, var(--tc-primary) 32%, var(--tc-border));
+}
+
+.call-card-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: var(--tc-radius-md);
+  background: var(--tc-primary-soft);
+  color: var(--tc-primary);
+  display: grid;
+  place-items: center;
+  font-size: 20px;
+}
+
+.call-card h2 {
+  margin: 0 0 6px;
+  font-size: 16px;
+}
+
+.call-card p {
+  margin: 0;
+  color: var(--tc-neutral-500);
+  font-size: 14px;
+}
+
+@media (max-width: 860px) {
+  .calls-page {
+    display: block;
+  }
+
+  .calls-grid {
+    grid-template-columns: 1fr;
+  }
+}
