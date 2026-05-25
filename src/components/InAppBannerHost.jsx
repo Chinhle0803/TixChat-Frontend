@@ -70,7 +70,7 @@ export default function InAppBannerHost({
               type="button"
               className="inapp-banner-main"
               onClick={handleOpen}
-              aria-label={isCallBanner ? 'Mo cuoc goi' : 'Mo cuoc tro chuyen'}
+              aria-label={isCallBanner ? 'Mở cuộc gọi' : 'Mở cuộc trò chuyện'}
             >
               <span className="inapp-banner-icon" aria-hidden="true">
                 {getBannerIcon(banner.type)}
@@ -89,14 +89,14 @@ export default function InAppBannerHost({
                     className="inapp-banner-action secondary"
                     onClick={handleSecondaryCallAction}
                   >
-                    {isJoinCallBanner ? 'An' : 'Tu choi'}
+                    {isJoinCallBanner ? 'Ẩn' : 'Từ chối'}
                   </button>
                   <button
                     type="button"
                     className="inapp-banner-action primary"
                     onClick={() => onAcceptCall?.(callId, conversationId)}
                   >
-                    {isJoinCallBanner ? 'Tham gia' : 'Nghe may'}
+                    {isJoinCallBanner ? 'Tham gia' : 'Nghe máy'}
                   </button>
                 </>
               ) : (
@@ -105,7 +105,7 @@ export default function InAppBannerHost({
                   className="inapp-banner-action primary"
                   onClick={handleOpen}
                 >
-                  Mo chat
+                  Mở chat
                 </button>
               )}
 
@@ -113,7 +113,7 @@ export default function InAppBannerHost({
                 type="button"
                 className="inapp-banner-close"
                 onClick={() => dismissBanner(banner.id)}
-                aria-label="Dong thong bao"
+                aria-label="Đóng thông báo"
               >
                 <FiX />
               </button>

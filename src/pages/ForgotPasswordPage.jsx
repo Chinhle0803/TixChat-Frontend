@@ -174,6 +174,7 @@ export default function ForgotPasswordPage({ onSwitchToLogin, onSuccess }) {
           <div className="form-group">
             <label htmlFor="email" className="form-label">
               <span className="label-text">Địa chỉ Email</span>
+              {email && <span className="label-status">✓</span>}
             </label>
             <div className="form-input-wrapper">
               <input
@@ -191,7 +192,6 @@ export default function ForgotPasswordPage({ onSwitchToLogin, onSuccess }) {
                 disabled={loading}
                 autoComplete="email"
               />
-              {email && <span className="label-status">✓</span>}
             </div>
             {errors.email && <span className="form-error">{errors.email}</span>}
             <p className="form-hint">Chúng tôi sẽ gửi mã xác minh đến email này</p>
@@ -204,6 +204,7 @@ export default function ForgotPasswordPage({ onSwitchToLogin, onSuccess }) {
             <div className="form-group">
               <label htmlFor="token" className="form-label">
                 <span className="label-text">Mã xác minh</span>
+                {token && <span className="label-status">✓</span>}
               </label>
               <div className="form-input-wrapper">
                 <input
@@ -221,7 +222,6 @@ export default function ForgotPasswordPage({ onSwitchToLogin, onSuccess }) {
                   disabled={loading}
                   maxLength="6"
                 />
-                {token && <span className="label-status">✓</span>}
               </div>
               {errors.token && <span className="form-error">{errors.token}</span>}
               <p className="form-hint">Kiểm tra email của bạn để tìm mã xác minh</p>
@@ -244,6 +244,7 @@ export default function ForgotPasswordPage({ onSwitchToLogin, onSuccess }) {
             <div className="form-group">
               <label htmlFor="newPassword" className="form-label">
                 <span className="label-text">Mật khẩu mới</span>
+                {newPassword && <span className="label-status">✓</span>}
               </label>
               <div className="form-input-wrapper">
                 <input
@@ -277,6 +278,7 @@ export default function ForgotPasswordPage({ onSwitchToLogin, onSuccess }) {
             <div className="form-group">
               <label htmlFor="confirmPassword" className="form-label">
                 <span className="label-text">Xác nhận mật khẩu</span>
+                {confirmPassword && <span className="label-status">✓</span>}
               </label>
               <div className="form-input-wrapper">
                 <input
@@ -321,6 +323,7 @@ export default function ForgotPasswordPage({ onSwitchToLogin, onSuccess }) {
         {/* Messages */}
         {errors.submit && (
           <div className="form-alert alert-error">
+            <span className="alert-icon">!</span>
             <span className="alert-text">{errors.submit}</span>
           </div>
         )}

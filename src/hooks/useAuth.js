@@ -35,40 +35,7 @@ export const useAuth = () => {
         setAuth(user, accessToken, refreshToken)
         return response.data
       } catch (err) {
-        let errorMsg = err.response?.data?.error || err.response?.data?.message || 'Login failed'
-        
-        // Translate login errors to Vietnamese
-        const errorMap = {
-          'incorrect password': 'Mật khẩu không chính xác',
-          'wrong password': 'Mật khẩu không chính xác',
-          'password is incorrect': 'Mật khẩu không chính xác',
-          'user not found': 'Tài khoản không tồn tại',
-          'user does not exist': 'Tài khoản không tồn tại',
-          'email not found': 'Tài khoản không tồn tại',
-          'invalid credentials': 'Email hoặc mật khẩu không chính xác',
-          'invalid email or password': 'Email hoặc mật khẩu không chính xác',
-          'email not verified': 'Vui lòng xác thực tài khoản qua Email trước khi đăng nhập',
-          'please verify your email': 'Vui lòng xác thực tài khoản qua Email trước khi đăng nhập',
-          'account is locked': 'Tài khoản của bạn đã bị khóa',
-          'account is disabled': 'Tài khoản của bạn đã bị vô hiệu hóa',
-          'too many requests': 'Quá nhiều yêu cầu, vui lòng thử lại sau',
-          'too many login attempts': 'Quá nhiều yêu cầu đăng nhập, vui lòng thử lại sau',
-          'network error': 'Lỗi kết nối mạng, vui lòng kiểm tra lại đường truyền',
-          'login failed': 'Đăng nhập thất bại'
-        }
-
-        if (typeof errorMsg === 'string') {
-          const lowerMsg = errorMsg.toLowerCase()
-          const matchedKey = Object.keys(errorMap).find(key => lowerMsg.includes(key))
-          if (matchedKey) {
-            errorMsg = errorMap[matchedKey]
-          } else {
-            if (lowerMsg.includes('auth/') || lowerMsg.includes('failed') || lowerMsg.includes('error')) {
-              errorMsg = 'Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin.'
-            }
-          }
-        }
-
+        const errorMsg = err.response?.data?.error || 'Login failed'
         setError(errorMsg)
         throw err
       } finally {

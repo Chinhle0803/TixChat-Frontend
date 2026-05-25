@@ -200,7 +200,7 @@ export const useGlobalRealtime = ({ currentPath = '/', callControls = null } = {
       id: `group-call-${normalizeId(call?.callId)}`,
       type: 'call',
       title,
-      body: 'Cuoc goi nhom dang dien ra',
+      body: 'Cuộc gọi nhóm đang diễn ra',
       data: {
         type: 'call',
         action: 'join',
