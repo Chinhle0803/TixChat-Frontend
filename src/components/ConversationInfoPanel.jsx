@@ -4,7 +4,6 @@ import {
   FiBookOpen,
   FiCheckCircle,
   FiCalendar,
-  FiChevronLeft,
   FiChevronRight,
   FiChevronDown,
   FiChevronUp,
@@ -85,6 +84,10 @@ const normalizeId = (value) => {
   }
   return String(value)
 }
+
+const canUseGroupAdminEndpoints = (role) => (
+  role === 'admin' || role === 'moderator'
+)
 
 const formatFileSize = (size = 0) => {
   if (!Number.isFinite(size) || size <= 0) return '0 B'
@@ -191,6 +194,18 @@ const ConversationInfoPanel = ({
     })
     return map
   }, [participantRecords])
+
+  const resolveCurrentUserRoleFromRecords = (records = participantRecords) => {
+    const roleByUserId = new Map()
+    ;(records || []).forEach((item) => {
+      const userId = normalizeId(item?.userId)
+      if (!userId) return
+      roleByUserId.set(userId, String(item?.role || 'member'))
+    })
+
+    return roleByUserId.get(normalizedCurrentUserId) ||
+      (normalizedCurrentUserId && normalizedCurrentUserId === normalizedCreatorId ? 'admin' : 'member')
+  }
 
   const currentUserRole = participantRoleMap.get(normalizedCurrentUserId) ||
     (normalizedCurrentUserId && normalizedCurrentUserId === normalizedCreatorId ? 'admin' : 'member')
@@ -384,17 +399,33 @@ const ConversationInfoPanel = ({
       setLoadingGroupAdminData(true)
 
       try {
-        const [participantsResponse, blockedResponse] = await Promise.all([
-          conversationService.getParticipants(conversationId),
-          conversationService.getBlockedUsers(conversationId),
-        ])
-
+        const participantsResponse = await conversationService.getParticipants(conversationId)
         if (isCancelled) return
 
-        setParticipantRecords(participantsResponse?.data?.participants || [])
-        setBlockedUserIds(blockedResponse?.data?.blockedUserIds || [])
+        const nextParticipantRecords = participantsResponse?.data?.participants || []
+        setParticipantRecords(nextParticipantRecords)
+
+        const nextRole = resolveCurrentUserRoleFromRecords(nextParticipantRecords)
+        if (!canUseGroupAdminEndpoints(nextRole)) {
+          setBlockedUserIds([])
+          return
+        }
+
+        try {
+          const blockedResponse = await conversationService.getBlockedUsers(conversationId)
+          if (!isCancelled) {
+            setBlockedUserIds(blockedResponse?.data?.blockedUserIds || [])
+          }
+        } catch (blockedError) {
+          if (!isCancelled) {
+            setBlockedUserIds([])
+            console.warn('Load blocked group users failed:', blockedError?.message || blockedError)
+          }
+        }
       } catch (error) {
         if (!isCancelled) {
+          setParticipantRecords([])
+          setBlockedUserIds([])
           console.warn('Load group admin data failed:', error?.message || error)
         }
       } finally {
@@ -409,20 +440,31 @@ const ConversationInfoPanel = ({
     return () => {
       isCancelled = true
     }
-  }, [isOpen, isGroupConversation, conversationId])
+  }, [isOpen, isGroupConversation, conversationId, normalizedCurrentUserId, normalizedCreatorId])
 
   const refreshGroupData = async () => {
     if (!isGroupConversation || !conversationId) return
 
     try {
-      const [participantsResponse, blockedResponse] = await Promise.all([
-        conversationService.getParticipants(conversationId),
-        conversationService.getBlockedUsers(conversationId),
-      ])
+      const participantsResponse = await conversationService.getParticipants(conversationId)
+      const nextParticipantRecords = participantsResponse?.data?.participants || []
+      setParticipantRecords(nextParticipantRecords)
 
-      setParticipantRecords(participantsResponse?.data?.participants || [])
-      setBlockedUserIds(blockedResponse?.data?.blockedUserIds || [])
+      const nextRole = resolveCurrentUserRoleFromRecords(nextParticipantRecords)
+      if (!canUseGroupAdminEndpoints(nextRole)) {
+        setBlockedUserIds([])
+        return
+      }
+
+      try {
+        const blockedResponse = await conversationService.getBlockedUsers(conversationId)
+        setBlockedUserIds(blockedResponse?.data?.blockedUserIds || [])
+      } catch (blockedError) {
+        setBlockedUserIds([])
+        console.warn('Refresh blocked group users failed:', blockedError?.message || blockedError)
+      }
     } catch (error) {
+      setBlockedUserIds([])
       console.warn('Refresh group data failed:', error?.message || error)
     }
   }
@@ -768,6 +810,7 @@ const ConversationInfoPanel = ({
       return
     }
 
+    await refreshGroupData()
     setShowGroupManagementView(true)
   }
 
@@ -1798,23 +1841,35 @@ const ConversationInfoPanel = ({
       </aside>
 
       {showGroupManagementView && isGroupConversation && (
-        <aside className="group-management-overlay" onClick={(event) => event.stopPropagation()}>
+        <div className="info-modal-overlay group-management-modal-overlay" onClick={() => setShowGroupManagementView(false)}>
+          <section
+            className={`group-management-modal ${canOperateAdminControls ? 'is-manager' : 'is-readonly'}`}
+            onClick={(event) => event.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="group-management-title"
+            aria-busy={loadingGroupAdminData}
+          >
           <header className="group-management-header">
             <button
               type="button"
               className="icon-ghost"
               onClick={() => setShowGroupManagementView(false)}
-              aria-label="Quay lại"
+              aria-label="Đóng quản lý nhóm"
             >
-              <FiChevronLeft />
+              <FiX />
             </button>
-            <h3>Quản lý nhóm</h3>
+            <h3 id="group-management-title">Quản lý nhóm</h3>
             <span className="group-management-header-spacer" aria-hidden="true" />
           </header>
 
           <div className="group-management-note">
             <FiShield />
-            <span>Bạn có quyền quản lý nhóm này</span>
+            <span>
+              {canOperateAdminControls
+                ? 'Bạn có quyền quản lý nhóm này'
+                : 'Chỉ trưởng nhóm hoặc phó nhóm mới thay đổi được cài đặt quản trị'}
+            </span>
           </div>
 
           <div className="group-management-body">
@@ -1835,26 +1890,17 @@ const ConversationInfoPanel = ({
 
             <div className="group-management-row">
               <span>Ghim tin nhắn, ghi chú, bình chọn lên đầu hội thoại</span>
-              <label className="switch">
-                <input type="checkbox" checked disabled />
-                <span className="slider" />
-              </label>
+              <span className="group-management-static-state">Luôn bật</span>
             </div>
 
             <div className="group-management-row">
               <span>Tạo mới ghi chú, nhắc hẹn</span>
-              <label className="switch">
-                <input type="checkbox" checked disabled />
-                <span className="slider" />
-              </label>
+              <span className="group-management-static-state">Luôn bật</span>
             </div>
 
             <div className="group-management-row">
               <span>Tạo mới bình chọn</span>
-              <label className="switch">
-                <input type="checkbox" checked disabled />
-                <span className="slider" />
-              </label>
+              <span className="group-management-static-state">Luôn bật</span>
             </div>
 
             <div className="group-management-row">
@@ -1920,27 +1966,48 @@ const ConversationInfoPanel = ({
               </label>
             </div>
           </div>
-        </aside>
+          </section>
+        </div>
       )}
 
       {showGroupMembersView && isGroupConversation && (
-        <aside className="group-members-overlay" onClick={(event) => event.stopPropagation()}>
+        <div className="info-modal-overlay group-management-modal-overlay" onClick={() => setShowGroupMembersView(false)}>
+          <section
+            className="group-management-modal group-members-modal"
+            onClick={(event) => event.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="group-members-title"
+            aria-busy={isLoadingGroupProfiles || loadingGroupAdminData}
+          >
           <header className="group-management-header">
             <button
               type="button"
               className="icon-ghost"
               onClick={() => setShowGroupMembersView(false)}
-              aria-label="Quay lại"
+              aria-label="Đóng thành viên nhóm"
             >
-              <FiChevronLeft />
+              <FiX />
             </button>
-            <h3>Thành viên nhóm</h3>
+            <h3 id="group-members-title">Thành viên nhóm</h3>
             <span className="group-management-header-spacer" aria-hidden="true" />
           </header>
 
           <div className="group-members-body">
+            <label className="search-inline group-members-search">
+              <FiSearch aria-hidden="true" />
+              <input
+                type="text"
+                value={memberSearchText}
+                onChange={(event) => setMemberSearchText(event.target.value)}
+                placeholder="Tìm thành viên theo tên hoặc số điện thoại"
+              />
+            </label>
+
             {isLoadingGroupProfiles || loadingGroupAdminData ? (
               <p className="section-empty">Đang tải danh sách thành viên...</p>
+            ) : filteredGroupMembers.length === 0 ? (
+              <p className="section-empty">Không tìm thấy thành viên phù hợp.</p>
             ) : (
               <div className="group-member-role-list">
                 {filteredGroupMembers.map((member) => (
@@ -1981,7 +2048,8 @@ const ConversationInfoPanel = ({
               </div>
             )}
           </div>
-        </aside>
+          </section>
+        </div>
       )}
 
       {showMuteDurationPicker && (
