@@ -1,9 +1,8 @@
 import { useState } from 'react'
-import axios from 'axios'
-import { getNgrokBypassHeaders, resolveApiBaseUrl } from '../utils/runtimeUrl.js'
+import { authService } from '../services/api'
 
-const API_URL = resolveApiBaseUrl(import.meta.env.VITE_API_URL)
-const ngrokHeaders = getNgrokBypassHeaders(API_URL)
+const isValidEmail = (value = '') =>
+  /^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/.test(value)
 
 /**
  * ForgotPasswordPage - Luồng đặt lại mật khẩu
@@ -27,10 +26,11 @@ export default function ForgotPasswordPage({ onSwitchToLogin, onSuccess }) {
   const handleRequestReset = async (e) => {
     e.preventDefault()
     const newErrors = {}
+    const normalizedEmail = email.trim()
 
-    if (!email) {
+    if (!normalizedEmail) {
       newErrors.email = 'Email là bắt buộc'
-    } else if (!/^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/.test(email)) {
+    } else if (!isValidEmail(normalizedEmail)) {
       newErrors.email = 'Vui lòng nhập email hợp lệ'
     }
 
@@ -44,7 +44,8 @@ export default function ForgotPasswordPage({ onSwitchToLogin, onSuccess }) {
     setMessage('')
 
     try {
-      await axios.post(`${API_URL}/auth/forgot-password`, { email }, { headers: ngrokHeaders })
+      await authService.forgotPassword(normalizedEmail)
+      setEmail(normalizedEmail)
       setMessage('Mã xác minh đã được gửi đến email của bạn. Vui lòng kiểm tra hộp thư đến.')
       setStep(2)
     } catch (err) {
@@ -58,8 +59,10 @@ export default function ForgotPasswordPage({ onSwitchToLogin, onSuccess }) {
   const handleVerifyToken = async (e) => {
     e.preventDefault()
     const newErrors = {}
+    const normalizedEmail = email.trim()
+    const normalizedToken = token.trim().toUpperCase()
 
-    if (!token) {
+    if (!normalizedToken) {
       newErrors.token = 'Mã xác minh là bắt buộc'
     }
 
@@ -73,14 +76,9 @@ export default function ForgotPasswordPage({ onSwitchToLogin, onSuccess }) {
     setMessage('')
 
     try {
-      await axios.post(
-        `${API_URL}/auth/verify-reset-token`,
-        {
-          email,
-          token,
-        },
-        { headers: ngrokHeaders }
-      )
+      await authService.verifyResetToken(normalizedEmail, normalizedToken)
+      setEmail(normalizedEmail)
+      setToken(normalizedToken)
       setStep(3)
       setMessage('Xác minh thành công. Vui lòng nhập mật khẩu mới của bạn.')
     } catch (err) {
@@ -94,6 +92,8 @@ export default function ForgotPasswordPage({ onSwitchToLogin, onSuccess }) {
   const handleResetPassword = async (e) => {
     e.preventDefault()
     const newErrors = {}
+    const normalizedEmail = email.trim()
+    const normalizedToken = token.trim().toUpperCase()
 
     if (!newPassword) {
       newErrors.newPassword = 'Mật khẩu mới là bắt buộc'
@@ -117,16 +117,7 @@ export default function ForgotPasswordPage({ onSwitchToLogin, onSuccess }) {
     setMessage('')
 
     try {
-      await axios.post(
-        `${API_URL}/auth/reset-password`,
-        {
-          email,
-          token,
-          newPassword,
-          confirmPassword,
-        },
-        { headers: ngrokHeaders }
-      )
+      await authService.resetPassword(normalizedEmail, normalizedToken, newPassword, confirmPassword)
       setMessage('Đặt lại mật khẩu thành công! Đang chuyển hướng đến đăng nhập...')
       setTimeout(() => {
         onSuccess()
@@ -166,7 +157,7 @@ export default function ForgotPasswordPage({ onSwitchToLogin, onSuccess }) {
         </div>
       </div>
 
-      <form className="auth-form" onSubmit={
+      <form className="auth-form" noValidate data-testid="forgot-password-form" onSubmit={
         step === 1 ? handleRequestReset : step === 2 ? handleVerifyToken : handleResetPassword
       }>
         {/* Step 1: Email */}
@@ -191,6 +182,7 @@ export default function ForgotPasswordPage({ onSwitchToLogin, onSuccess }) {
                 className={`form-input ${errors.email ? 'input-error' : ''}`}
                 disabled={loading}
                 autoComplete="email"
+                data-testid="forgot-email"
               />
             </div>
             {errors.email && <span className="form-error">{errors.email}</span>}
@@ -221,6 +213,7 @@ export default function ForgotPasswordPage({ onSwitchToLogin, onSuccess }) {
                   className={`form-input code-input ${errors.token ? 'input-error' : ''}`}
                   disabled={loading}
                   maxLength="6"
+                  data-testid="forgot-token"
                 />
               </div>
               {errors.token && <span className="form-error">{errors.token}</span>}
@@ -261,6 +254,7 @@ export default function ForgotPasswordPage({ onSwitchToLogin, onSuccess }) {
                   className={`form-input ${errors.newPassword ? 'input-error' : ''}`}
                   disabled={loading}
                   autoComplete="new-password"
+                  data-testid="forgot-new-password"
                 />
                 <button
                   type="button"
@@ -295,6 +289,7 @@ export default function ForgotPasswordPage({ onSwitchToLogin, onSuccess }) {
                   className={`form-input ${errors.confirmPassword ? 'input-error' : ''}`}
                   disabled={loading}
                   autoComplete="new-password"
+                  data-testid="forgot-confirm-password"
                 />
                 <button
                   type="button"
@@ -336,7 +331,12 @@ export default function ForgotPasswordPage({ onSwitchToLogin, onSuccess }) {
         )}
 
         {/* Submit Button */}
-        <button type="submit" className="form-button button-primary" disabled={loading}>
+        <button
+          type="submit"
+          className="form-button button-primary"
+          disabled={loading}
+          data-testid="forgot-submit"
+        >
           {loading ? (
             <>
               <span className="button-spinner" />

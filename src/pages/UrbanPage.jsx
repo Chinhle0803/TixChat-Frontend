@@ -34,7 +34,7 @@ import {
 } from 'react-icons/fa6'
 import maplibregl from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
-import apiClient, { API_URL, postService, userService } from '../services/api'
+import apiClient, { API_NGROK_HEADERS, API_URL, postService, userService } from '../services/api'
 import { getSocket, initSocket } from '../services/socket'
 import useAuthStore from '../store/authStore'
 import { formatLocationLabel, getLocationInputPlaceholder } from '../utils/addressFormat.js'
@@ -392,7 +392,10 @@ const LocationMapPicker = ({ lat, lng, onPick }) => {
               const token = useAuthStore.getState()?.accessToken
               return {
                 url,
-                headers: token ? { Authorization: `Bearer ${token}` } : {},
+                headers: {
+                  ...API_NGROK_HEADERS,
+                  ...(token ? { Authorization: `Bearer ${token}` } : {}),
+                },
               }
             }
             return { url }
@@ -1640,7 +1643,10 @@ export const UrbanMapPage = () => {
               const token = useAuthStore.getState()?.accessToken
               return {
                 url,
-                headers: token ? { Authorization: `Bearer ${token}` } : {},
+                headers: {
+                  ...API_NGROK_HEADERS,
+                  ...(token ? { Authorization: `Bearer ${token}` } : {}),
+                },
               }
             }
             return { url }

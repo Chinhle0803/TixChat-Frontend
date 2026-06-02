@@ -8,3 +8,12 @@ dist/
 .vscode/
 .idea/
 coverage/
+test-results/
+playwright-report/
+reports/playwright-artifacts/
+reports/module1-playwright-results.json
+reports/real-use-cases-playwright-artifacts/
+reports/real-use-cases-results.json
+reports/
+scripts/
+tests/

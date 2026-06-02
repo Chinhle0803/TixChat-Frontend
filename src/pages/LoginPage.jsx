@@ -19,10 +19,11 @@ export default function LoginPage({ onSwitchToRegister, onSwitchToForgot, onSucc
 
   const validateForm = () => {
     const newErrors = {}
+    const normalizedEmail = email.trim()
 
-    if (!email.trim()) {
+    if (!normalizedEmail) {
       newErrors.email = 'Email là bắt buộc'
-    } else if (!/^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/.test(email)) {
+    } else if (!/^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/.test(normalizedEmail)) {
       newErrors.email = 'Vui lòng nhập email hợp lệ'
     }
 
@@ -42,7 +43,7 @@ export default function LoginPage({ onSwitchToRegister, onSwitchToForgot, onSucc
     }
 
     try {
-      await login(email, password)
+      await login(email.trim(), password)
       onSuccess()
     } catch (err) {
       // Error handled by useAuth hook
@@ -59,7 +60,7 @@ export default function LoginPage({ onSwitchToRegister, onSwitchToForgot, onSucc
         <p className="auth-subtitle">Chào mừng bạn quay trở lại TixChat</p>
       </div>
 
-      <form className="auth-form" onSubmit={handleSubmit}>
+      <form className="auth-form" onSubmit={handleSubmit} noValidate data-testid="login-form">
         {/* Email Field */}
         <div className="form-group">
           <label htmlFor="email" className="form-label">
@@ -81,6 +82,7 @@ export default function LoginPage({ onSwitchToRegister, onSwitchToForgot, onSucc
               className={`form-input ${errors.email ? 'input-error' : ''}`}
               disabled={loading}
               autoComplete="email"
+              data-testid="login-email"
             />
           </div>
           {errors.email && <span className="form-error">{errors.email}</span>}
@@ -107,6 +109,7 @@ export default function LoginPage({ onSwitchToRegister, onSwitchToForgot, onSucc
               className={`form-input ${errors.password ? 'input-error' : ''}`}
               disabled={loading}
               autoComplete="current-password"
+              data-testid="login-password"
             />
             <button
               type="button"
@@ -135,12 +138,18 @@ export default function LoginPage({ onSwitchToRegister, onSwitchToForgot, onSucc
           onClick={onSwitchToForgot}
           className="form-link"
           disabled={loading}
+          data-testid="login-forgot-link"
         >
           Quên mật khẩu?
         </button>
 
         {/* Submit Button */}
-        <button type="submit" className="form-button button-primary" disabled={loading}>
+        <button
+          type="submit"
+          className="form-button button-primary"
+          disabled={loading}
+          data-testid="login-submit"
+        >
           {loading ? (
             <>
               <span className="button-spinner" />

@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import maplibregl from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import useAuthStore from '../store/authStore'
-import apiClient, { API_URL, userService } from '../services/api'
+import apiClient, { API_NGROK_HEADERS, API_URL, userService } from '../services/api'
 import { useDialog } from '../context/DialogContext'
 import {
   extractLocationFromReverseGeocode as extractFormattedLocationFromReverseGeocode,
@@ -13,6 +13,10 @@ import {
 import '../styles/ProfilePage.css'
 
 const DEFAULT_PROFILE_LOCATION = { lat: 10.776889, lng: 106.700806 }
+const MAX_AVATAR_SIZE_BYTES = 5 * 1024 * 1024
+const ALLOWED_AVATAR_MIME_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
+const ALLOWED_AVATAR_EXTENSIONS = ['jpg', 'jpeg', 'png', 'gif', 'webp']
+const DISPLAY_NAME_PATTERN = /^[\p{L}\s]+$/u
 
 const toCoordinateNumber = (value) => {
   const number = Number(value)
@@ -24,57 +28,6 @@ const formatCoordinates = (location = {}) => {
   const lng = toCoordinateNumber(location.lng)
   if (lat === null || lng === null) return ''
   return `${lat.toFixed(5)}, ${lng.toFixed(5)}`
-}
-
-const getLocationLabel = (location = {}) => {
-  const district = String(location?.district || '').trim()
-  const province = String(location?.province || '').trim()
-  const address = String(location?.address || '').trim()
-  const regionLabel = [district, province].filter(Boolean).join(', ')
-  return regionLabel || address || 'Chưa chọn khu vực'
-}
-
-const normalizeProfileLocation = (location = {}, fallbackUser = {}) => {
-  const province = String(location?.province || fallbackUser?.province || '').trim()
-  const district = String(location?.district || fallbackUser?.district || '').trim()
-  const address = String(
-    location?.address ||
-    [district, province].filter(Boolean).join(', ')
-  ).trim()
-  return {
-    address,
-    lat: location?.lat ?? '',
-    lng: location?.lng ?? '',
-    province,
-    district,
-  }
-}
-
-const extractLocationFromReverseGeocode = (data = {}, coordinates = {}) => {
-  const address = data?.address || {}
-  const province = String(
-    address.city ||
-    address.state ||
-    address.province ||
-    address.region ||
-    ''
-  ).trim()
-  const district = String(
-    address.city_district ||
-    address.district ||
-    address.county ||
-    address.suburb ||
-    address.town ||
-    ''
-  ).trim()
-
-  return {
-    address: String(data?.display_name || '').trim(),
-    lat: coordinates.lat,
-    lng: coordinates.lng,
-    province,
-    district,
-  }
 }
 
 const reverseGeocodeLocation = async ({ lat, lng }) => {
@@ -89,6 +42,30 @@ const reverseGeocodeLocation = async ({ lat, lng }) => {
     ...location,
     address: location.address || `Vị trí đã chọn (${formatCoordinates(location)})`,
   }
+}
+
+const validateDisplayName = (value = '') => {
+  const normalizedValue = value.trim()
+
+  if (!normalizedValue) return 'Tên hiển thị không được để trống'
+  if (normalizedValue.length < 2) return 'Tên hiển thị phải có ít nhất 2 ký tự'
+  if (normalizedValue.length > 100) return 'Tên hiển thị không được vượt quá 100 ký tự'
+  if (!DISPLAY_NAME_PATTERN.test(normalizedValue)) {
+    return 'Tên hiển thị không được chứa số hoặc ký tự đặc biệt'
+  }
+
+  return ''
+}
+
+const getAvatarExtension = (fileName = '') => (
+  String(fileName).split('.').pop()?.toLowerCase() || ''
+)
+
+const isSupportedAvatarFile = (file = null) => {
+  if (!file) return false
+  const extension = getAvatarExtension(file.name)
+  return ALLOWED_AVATAR_EXTENSIONS.includes(extension) &&
+    ALLOWED_AVATAR_MIME_TYPES.includes(file.type)
 }
 
 const ProfileLocationPicker = ({ value, onChange, onClose }) => {
@@ -178,7 +155,10 @@ const ProfileLocationPicker = ({ value, onChange, onClose }) => {
               const token = useAuthStore.getState()?.accessToken
               return {
                 url,
-                headers: token ? { Authorization: `Bearer ${token}` } : {},
+                headers: {
+                  ...API_NGROK_HEADERS,
+                  ...(token ? { Authorization: `Bearer ${token}` } : {}),
+                },
               }
             }
             return { url }
@@ -360,13 +340,15 @@ const ProfilePage = () => {
   const handleAvatarChange = (e) => {
     const file = e.target.files[0]
     if (file) {
-      if (file.size > 5 * 1024 * 1024) {
+      if (file.size > MAX_AVATAR_SIZE_BYTES) {
         showMessage('error', 'Kích thước tệp không được vượt quá 5MB')
+        e.target.value = ''
         return
       }
 
-      if (!file.type.startsWith('image/')) {
-        showMessage('error', 'Vui lòng chọn một tệp hình ảnh')
+      if (!isSupportedAvatarFile(file)) {
+        showMessage('error', 'Vui lòng chọn ảnh định dạng JPG, PNG, GIF hoặc WEBP')
+        e.target.value = ''
         return
       }
 
@@ -411,27 +393,21 @@ const ProfilePage = () => {
   // Update profile info
   const handleUpdateProfile = async () => {
     const nextErrors = {}
+    const nextDisplayName = displayName.trim()
+    const nextBio = bio.trim()
+    const displayNameError = validateDisplayName(nextDisplayName)
 
-    if (!displayName.trim()) {
-      nextErrors.displayName = 'Tên hiển thị không được để trống'
+    if (displayNameError) {
+      nextErrors.displayName = displayNameError
     }
 
-    if (!bio.trim()) {
+    if (!nextBio) {
       nextErrors.bio = 'Bio không được để trống'
     }
 
     if (Object.keys(nextErrors).length > 0) {
       setProfileErrors(nextErrors)
-      const missingLabels = []
-      if (nextErrors.displayName) missingLabels.push('tên hiển thị')
-      if (nextErrors.bio) missingLabels.push('bio')
-
-      const missingMessage =
-        missingLabels.length > 1
-          ? `Vui lòng nhập đầy đủ ${missingLabels.join(' và ')} trước khi lưu.`
-          : `Vui lòng nhập ${missingLabels[0]} trước khi lưu.`
-
-      showMessage('error', missingMessage)
+      showMessage('error', nextErrors.displayName || nextErrors.bio)
 
       if (nextErrors.displayName) {
         displayNameRef.current?.focus()
@@ -446,19 +422,19 @@ const ProfilePage = () => {
     setLoading(true)
     try {
       const response = await userService.updateProfile({
-        displayName: displayName.trim(),
-        bio: bio.trim(),
+        displayName: nextDisplayName,
+        bio: nextBio,
         province: profileLocation.province || '',
         district: profileLocation.district || '',
         location: profileLocation,
       })
 
       const responseUser = response.data?.user || {}
-      const nextDisplayName =
+      const updatedDisplayName =
         responseUser.fullName ||
         responseUser.displayName ||
-        displayName.trim()
-      const nextBio = responseUser.bio ?? bio.trim()
+        nextDisplayName
+      const updatedBio = responseUser.bio ?? nextBio
       const nextAvatar = responseUser.avatar || user?.avatar || avatar
       const nextProfileLocation = normalizeFormattedProfileLocation(responseUser.location, {
         province: responseUser.province ?? profileLocation.province,
@@ -468,9 +444,9 @@ const ProfilePage = () => {
       const updatedUser = {
         ...user,
         ...responseUser,
-        displayName: responseUser.displayName || nextDisplayName,
-        fullName: responseUser.fullName || nextDisplayName,
-        bio: nextBio,
+        displayName: responseUser.displayName || updatedDisplayName,
+        fullName: responseUser.fullName || updatedDisplayName,
+        bio: updatedBio,
         avatar: nextAvatar,
         province: nextProfileLocation.province,
         district: nextProfileLocation.district,
@@ -478,8 +454,8 @@ const ProfilePage = () => {
       }
 
       updateUser(updatedUser)
-      setDisplayName(nextDisplayName)
-      setBio(nextBio)
+      setDisplayName(updatedDisplayName)
+      setBio(updatedBio)
       setProfileLocation(nextProfileLocation)
       setAvatar(nextAvatar)
       setAvatarPreview(nextAvatar)
@@ -518,6 +494,11 @@ const ProfilePage = () => {
 
     if (newPassword.length < 6) {
       showMessage('error', 'Mật khẩu mới phải có ít nhất 6 ký tự')
+      return
+    }
+
+    if (!confirmPassword) {
+      showMessage('error', 'Vui lòng xác nhận mật khẩu mới')
       return
     }
 
@@ -628,6 +609,8 @@ const ProfilePage = () => {
                 className="avatar-upload-btn"
                 onClick={() => document.getElementById('avatar-input').click()}
                 title="Thay đổi avatar"
+                aria-label="Thay đổi avatar"
+                data-testid="avatar-picker-button"
               >
                 +
               </button>
@@ -636,6 +619,7 @@ const ProfilePage = () => {
                 type="file"
                 accept="image/*"
                 onChange={handleAvatarChange}
+                data-testid="avatar-input"
               />
             </div>
 
@@ -645,6 +629,7 @@ const ProfilePage = () => {
                   className="btn btn-primary"
                   onClick={handleUploadAvatar}
                   disabled={loading}
+                  data-testid="avatar-upload-submit"
                 >
                   {loading ? 'Đang tải...' : 'Tải Avatar'}
                 </button>
@@ -667,8 +652,9 @@ const ProfilePage = () => {
             <h2>Thông Tin Cá Nhân</h2>
 
             <div className="form-group">
-              <label>Tên Hiển Thị</label>
+              <label htmlFor="profile-display-name">Tên Hiển Thị</label>
               <input
+                id="profile-display-name"
                 ref={displayNameRef}
                 type="text"
                 value={displayName}
@@ -683,6 +669,7 @@ const ProfilePage = () => {
                 required
                 aria-invalid={Boolean(profileErrors.displayName)}
                 aria-describedby={profileErrors.displayName ? 'display-name-error' : undefined}
+                data-testid="profile-display-name"
               />
               {profileErrors.displayName ? (
                 <small id="display-name-error" className="field-error-text">{profileErrors.displayName}</small>
@@ -690,18 +677,21 @@ const ProfilePage = () => {
             </div>
 
             <div className="form-group">
-              <label>Email</label>
+              <label htmlFor="profile-email">Email</label>
               <input
+                id="profile-email"
                 type="email"
                 value={user?.email || ''}
                 disabled
                 style={{ backgroundColor: '#e8e8e8' }}
+                data-testid="profile-email"
               />
             </div>
 
             <div className="form-group">
-              <label>Bio</label>
+              <label htmlFor="profile-bio">Bio</label>
               <textarea
+                id="profile-bio"
                 ref={bioRef}
                 value={bio}
                 onChange={(e) => {
@@ -716,6 +706,7 @@ const ProfilePage = () => {
                 required
                 aria-invalid={Boolean(profileErrors.bio)}
                 aria-describedby={profileErrors.bio ? 'bio-error bio-count' : 'bio-count'}
+                data-testid="profile-bio"
               />
               {profileErrors.bio ? (
                 <small id="bio-error" className="field-error-text">{profileErrors.bio}</small>
@@ -744,6 +735,7 @@ const ProfilePage = () => {
               onClick={handleUpdateProfile}
               disabled={loading}
               style={{ width: '100%' }}
+              data-testid="profile-save"
             >
               {loading ? 'Đang cập nhật...' : 'Lưu Thay Đổi'}
             </button>
@@ -752,6 +744,7 @@ const ProfilePage = () => {
               className="btn btn-secondary"
               onClick={() => setShowPasswordModal(true)}
               style={{ width: '100%', marginTop: '10px' }}
+              data-testid="open-change-password"
             >
               Đổi Mật Khẩu
             </button>
@@ -795,14 +788,16 @@ const ProfilePage = () => {
               }}
             >
               <div className="form-group password-group">
-                <label>Mật Khẩu Hiện Tại</label>
+                <label htmlFor="current-password">Mật Khẩu Hiện Tại</label>
                 <input
+                  id="current-password"
                   type={showPasswords.current ? 'text' : 'password'}
                   value={currentPassword}
                   onChange={(e) => setCurrentPassword(e.target.value)}
                   placeholder="Nhập mật khẩu hiện tại"
                   disabled={loading}
                   autoFocus
+                  data-testid="current-password"
                 />
                 <button
                   className="toggle-password"
@@ -814,13 +809,15 @@ const ProfilePage = () => {
               </div>
 
               <div className="form-group password-group">
-                <label>Mật Khẩu Mới</label>
+                <label htmlFor="new-password">Mật Khẩu Mới</label>
                 <input
+                  id="new-password"
                   type={showPasswords.new ? 'text' : 'password'}
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
                   placeholder="Nhập mật khẩu mới"
                   disabled={loading}
+                  data-testid="new-password"
                 />
                 <button
                   className="toggle-password"
@@ -832,13 +829,15 @@ const ProfilePage = () => {
               </div>
 
               <div className="form-group password-group">
-                <label>Xác Nhận Mật Khẩu</label>
+                <label htmlFor="confirm-password">Xác Nhận Mật Khẩu</label>
                 <input
+                  id="confirm-password"
                   type={showPasswords.confirm ? 'text' : 'password'}
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   placeholder="Nhập lại mật khẩu mới"
                   disabled={loading}
+                  data-testid="confirm-password"
                 />
                 <button
                   className="toggle-password"
@@ -853,7 +852,12 @@ const ProfilePage = () => {
                 <button type="button" className="btn btn-secondary" onClick={closePasswordModal} disabled={loading}>
                   Hủy
                 </button>
-                <button type="submit" className="btn btn-danger" disabled={loading}>
+                <button
+                  type="submit"
+                  className="btn btn-danger"
+                  disabled={loading}
+                  data-testid="change-password-submit"
+                >
                   {loading ? 'Đang xử lý...' : 'Xác Nhận Đổi Mật Khẩu'}
                 </button>
               </div>

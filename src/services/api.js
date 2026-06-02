@@ -4,13 +4,13 @@ import { createChatApiServices } from './apiContracts.js'
 import { getNgrokBypassHeaders, resolveApiBaseUrl } from '../utils/runtimeUrl.js'
 
 export const API_URL = resolveApiBaseUrl(import.meta.env.VITE_API_URL)
-const ngrokHeaders = getNgrokBypassHeaders(API_URL)
+export const API_NGROK_HEADERS = getNgrokBypassHeaders(API_URL)
 
 const apiClient = axios.create({
   baseURL: API_URL,
   headers: {
     'Content-Type': 'application/json',
-    ...ngrokHeaders,
+    ...API_NGROK_HEADERS,
   },
 })
 
@@ -42,7 +42,7 @@ apiClient.interceptors.response.use(
         }, {
           headers: {
             'Content-Type': 'application/json',
-            ...ngrokHeaders,
+            ...API_NGROK_HEADERS,
           },
         })
 
@@ -67,6 +67,9 @@ const { authApi, userApi, conversationApi, messageApi, callApi, notificationApi,
 export const authService = {
   register: authApi.register,
   login: authApi.login,
+  forgotPassword: authApi.forgotPassword,
+  verifyResetToken: authApi.verifyResetToken,
+  resetPassword: authApi.resetPassword,
   logout: authApi.logout,
   getMe: authApi.getMe,
 }
