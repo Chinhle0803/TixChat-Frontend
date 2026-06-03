@@ -862,6 +862,9 @@ const ChatPage = () => {
                   ? `Đang trong cuộc gọi - ${callControls.activeDurationLabel || '00:00'}`
                   : 'Đang kết nối...'}
             </span>
+            {callControls.callConnectionMessage && (
+              <span className="call-connection-alert">{callControls.callConnectionMessage}</span>
+            )}
           </div>
           <div className="global-active-call-actions">
             <button type="button" onClick={callControls.toggleMute} title="Tắt/bật micro">

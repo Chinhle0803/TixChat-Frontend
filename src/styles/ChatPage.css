@@ -145,6 +145,11 @@
   color: var(--destructive) !important;
 }
 
+.call-connection-alert {
+  color: #d97706 !important;
+  line-height: 1.35;
+}
+
 .global-call-copy strong,
 .global-active-call-info strong {
   display: block;

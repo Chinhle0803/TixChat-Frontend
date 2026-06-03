@@ -62,6 +62,8 @@ const useCall = ({ currentUserId } = {}) => {
   const [isMuted, setIsMuted] = useState(false)
   const [isVideoEnabled, setIsVideoEnabled] = useState(false)
   const [remoteVideoTiles, setRemoteVideoTiles] = useState([])
+  const [isRecoveringConnection, setIsRecoveringConnection] = useState(false)
+  const [participantConnectionNotice, setParticipantConnectionNotice] = useState(null)
 
   const meetingSessionRef = useRef(null)
   const pendingJoinInfoRef = useRef(null)
@@ -124,6 +126,8 @@ const useCall = ({ currentUserId } = {}) => {
     setCurrentCall(null)
     setCallPhase('idle')
     setActiveDurationSeconds(0)
+    setIsRecoveringConnection(false)
+    setParticipantConnectionNotice(null)
   }, [stopMeeting])
 
   const bindVideoTile = useCallback((audioVideo, tileState) => {
@@ -183,6 +187,8 @@ const useCall = ({ currentUserId } = {}) => {
 
     stopMeeting()
     setLastCallNotice(null)
+    setIsRecoveringConnection(false)
+    setParticipantConnectionNotice(null)
     setCurrentCall(call)
     setCallPhase(call.status === 'accepted' ? 'active' : 'ringing')
     await waitForRender()
@@ -252,6 +258,8 @@ const useCall = ({ currentUserId } = {}) => {
     try {
       setCallError('')
       setLastCallNotice(null)
+      setIsRecoveringConnection(false)
+      setParticipantConnectionNotice(null)
       setAvailableGroupCall(null)
       setCallPhase('starting')
       const response = await callService.startCall(conversationId, callType)
@@ -275,6 +283,8 @@ const useCall = ({ currentUserId } = {}) => {
     try {
       setCallError('')
       setLastCallNotice(null)
+      setIsRecoveringConnection(false)
+      setParticipantConnectionNotice(null)
       setCurrentCall(incomingCall)
       setIncomingCall(null)
       setAvailableGroupCall(null)
@@ -304,6 +314,8 @@ const useCall = ({ currentUserId } = {}) => {
     try {
       setCallError('')
       setLastCallNotice(null)
+      setIsRecoveringConnection(false)
+      setParticipantConnectionNotice(null)
       setAvailableGroupCall(null)
       setIncomingCall(null)
       setCallPhase('joining')
@@ -486,6 +498,23 @@ const useCall = ({ currentUserId } = {}) => {
     const socket = getSocket() || initSocket()
     if (!socket) return undefined
 
+    const hasTrackedCall = () =>
+      Boolean(
+        currentCallRef.current?.callId ||
+        incomingCallRef.current?.callId ||
+        availableGroupCallRef.current?.callId
+      )
+
+    const isTrackedCall = (callId) =>
+      Boolean(
+        callId &&
+        (
+          currentCallRef.current?.callId === callId ||
+          incomingCallRef.current?.callId === callId ||
+          availableGroupCallRef.current?.callId === callId
+        )
+      )
+
     const handleIncoming = ({ call }) => {
       if (!call?.callId) return
       if (normalizeId(call.callerId) === normalizeId(currentUserId)) return
@@ -542,8 +571,21 @@ const useCall = ({ currentUserId } = {}) => {
       setCallPhase('idle')
     }
 
-    const handleParticipantChanged = ({ call }) => {
+    const handleParticipantChanged = ({ call, participantId }) => {
       if (!call?.callId) return
+      const normalizedParticipantId = normalizeId(participantId)
+      if (normalizedParticipantId) {
+        setParticipantConnectionNotice((currentNotice) => {
+          if (
+            currentNotice?.callId === call.callId &&
+            currentNotice?.participantId === normalizedParticipantId
+          ) {
+            return null
+          }
+          return currentNotice
+        })
+      }
+
       if (isAvailableGroupCall(call)) {
         setAvailableGroupCall(call)
         return
@@ -555,9 +597,52 @@ const useCall = ({ currentUserId } = {}) => {
     }
 
     const handleReconnect = () => {
+      setIsRecoveringConnection(false)
       reconcileCallState().catch((error) => {
         console.warn('Failed to recover call after reconnect:', error?.message || error)
       })
+    }
+
+    const handleDisconnect = () => {
+      if (hasTrackedCall()) {
+        setIsRecoveringConnection(true)
+      }
+    }
+
+    const handleParticipantConnectionLost = ({ call, participantId }) => {
+      const normalizedParticipantId = normalizeId(participantId)
+      if (!call?.callId || !normalizedParticipantId) return
+      if (normalizedParticipantId === normalizeId(currentUserId)) return
+      if (!isTrackedCall(call.callId)) return
+
+      setParticipantConnectionNotice({
+        callId: call.callId,
+        participantId: normalizedParticipantId,
+      })
+
+      if (currentCallRef.current?.callId === call.callId) {
+        setCurrentCall(call)
+      }
+    }
+
+    const handleParticipantConnectionRestored = ({ call, participantId }) => {
+      const normalizedParticipantId = normalizeId(participantId)
+      if (!call?.callId || !normalizedParticipantId) return
+      if (!isTrackedCall(call.callId)) return
+
+      setParticipantConnectionNotice((currentNotice) => {
+        if (
+          currentNotice?.callId === call.callId &&
+          currentNotice?.participantId === normalizedParticipantId
+        ) {
+          return null
+        }
+        return currentNotice
+      })
+
+      if (currentCallRef.current?.callId === call.callId) {
+        setCurrentCall(call)
+      }
     }
 
     const handleTerminal = ({ call }) => {
@@ -572,6 +657,8 @@ const useCall = ({ currentUserId } = {}) => {
           durationSeconds: getCallDurationSeconds(call),
         })
         setAvailableGroupCall(null)
+        setIsRecoveringConnection(false)
+        setParticipantConnectionNotice(null)
         resetCallState()
       }
     }
@@ -581,7 +668,10 @@ const useCall = ({ currentUserId } = {}) => {
     socket.on('call:active_available', handleAvailableGroupCall)
     socket.on('call:participant_joined', handleParticipantChanged)
     socket.on('call:participant_left', handleParticipantChanged)
+    socket.on('call:participant_connection_lost', handleParticipantConnectionLost)
+    socket.on('call:participant_connection_restored', handleParticipantConnectionRestored)
     socket.on('connect', handleReconnect)
+    socket.on('disconnect', handleDisconnect)
     terminalEvents.forEach((eventName) => socket.on(eventName, handleTerminal))
 
     return () => {
@@ -590,7 +680,10 @@ const useCall = ({ currentUserId } = {}) => {
       socket.off('call:active_available', handleAvailableGroupCall)
       socket.off('call:participant_joined', handleParticipantChanged)
       socket.off('call:participant_left', handleParticipantChanged)
+      socket.off('call:participant_connection_lost', handleParticipantConnectionLost)
+      socket.off('call:participant_connection_restored', handleParticipantConnectionRestored)
       socket.off('connect', handleReconnect)
+      socket.off('disconnect', handleDisconnect)
       terminalEvents.forEach((eventName) => socket.off(eventName, handleTerminal))
     }
   }, [currentUserId, incomingCall?.callId, reconcileCallState, resetCallState])
@@ -615,6 +708,20 @@ const useCall = ({ currentUserId } = {}) => {
 
   useEffect(() => () => stopMeeting(), [stopMeeting])
 
+  const callForConnectionNotice = currentCall || incomingCall || availableGroupCall
+  const isGroupConnectionNotice =
+    String(callForConnectionNotice?.conversationType || '').toLowerCase() === 'group' ||
+    (Array.isArray(callForConnectionNotice?.participantIds) && callForConnectionNotice.participantIds.length > 2)
+  let participantConnectionMessage = ''
+  if (participantConnectionNotice?.callId === callForConnectionNotice?.callId) {
+    participantConnectionMessage = isGroupConnectionNotice
+      ? 'Một thành viên đang mất kết nối. Cuộc gọi sẽ tự cập nhật nếu họ không quay lại.'
+      : 'Người dùng bên kia đang mất kết nối. Cuộc gọi sẽ tự kết thúc nếu không khôi phục kịp.'
+  }
+  const callConnectionMessage = isRecoveringConnection
+    ? 'Bạn đang mất kết nối. Đang thử khôi phục cuộc gọi...'
+    : participantConnectionMessage
+
   return {
     incomingCall,
     currentCall,
@@ -627,6 +734,9 @@ const useCall = ({ currentUserId } = {}) => {
     isMuted,
     isVideoEnabled,
     remoteVideoTiles,
+    isRecoveringConnection,
+    participantConnectionNotice,
+    callConnectionMessage,
     audioElementRef,
     localVideoRef,
     remoteVideoRef,

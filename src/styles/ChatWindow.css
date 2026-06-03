@@ -390,6 +390,11 @@
   color: var(--destructive) !important;
 }
 
+.call-connection-alert {
+  color: #d97706 !important;
+  line-height: 1.35;
+}
+
 .call-banner.incoming {
   border-color: color-mix(in srgb, var(--destructive) 26%, transparent);
   background: color-mix(in srgb, var(--destructive) 6%, var(--card));

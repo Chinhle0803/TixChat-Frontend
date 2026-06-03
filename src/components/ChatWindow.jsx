@@ -852,6 +852,9 @@ const ChatWindow = ({
               <div>
                 <strong>Cuộc gọi {callControls.incomingCall.callType === 'video' ? 'video' : 'thoại'} đến</strong>
                 <span className="call-status-waiting">{chatHeaderName}</span>
+                {callControls.callConnectionMessage && (
+                  <span className="call-connection-alert">{callControls.callConnectionMessage}</span>
+                )}
               </div>
               <div className="call-banner-actions">
                 <button type="button" className="call-decline" onClick={callControls.declineCall} title="Từ chối">
@@ -869,6 +872,9 @@ const ChatWindow = ({
               <div>
                 <strong>Cuộc gọi nhóm đang diễn ra</strong>
                 <span className="call-status-waiting">Bạn có thể tham gia cuộc gọi này</span>
+                {callControls.callConnectionMessage && (
+                  <span className="call-connection-alert">{callControls.callConnectionMessage}</span>
+                )}
               </div>
               <div className="call-banner-actions">
                 <button type="button" className="call-decline" onClick={callControls.dismissAvailableGroupCall} title="Ẩn">
@@ -913,6 +919,9 @@ const ChatWindow = ({
                             ? `Đang trong cuộc gọi - ${callControls.activeDurationLabel || '00:00'}`
                             : 'Đang kết nối...'}
                       </span>
+                      {callControls.callConnectionMessage && (
+                        <span className="call-connection-alert">{callControls.callConnectionMessage}</span>
+                      )}
                     </div>
                     <div className="call-controls">
                       <button type="button" onClick={callControls.toggleMute} title="Tắt/bật micro">
@@ -939,6 +948,9 @@ const ChatWindow = ({
                           ? `Đang trong cuộc gọi - ${callControls.activeDurationLabel || '00:00'}`
                           : 'Đang kết nối...'}
                     </span>
+                    {callControls.callConnectionMessage && (
+                      <span className="call-connection-alert">{callControls.callConnectionMessage}</span>
+                    )}
                   </div>
                   <div className="call-controls">
                     <button type="button" onClick={callControls.toggleMute} title="Tắt/bật micro">
